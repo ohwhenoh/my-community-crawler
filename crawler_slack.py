@@ -500,7 +500,19 @@ def generate_korean_outreach_report():
         f"🎯 *[경쟁사 대비 F5 솔루션 제안 포인트 2: 독보적 AI 보안 아키텍처]*\n"
         f"{tech_content}\n"
     )
+
+    # Load Weekly Trends Cache
+    try:
+        import json
+        with open('trends_cache.json', 'r', encoding='utf-8') as tf:
+            trend_data = json.load(tf)
+            trend_text = trend_data.get('content', '')
+            report_text += f"{trend_text}\n"
+    except Exception as e:
+        print(f"주간 트렌드 캐시 로드 에러: {e}")
+
     return report_text
+
 def send_to_slack(message):
 
 
