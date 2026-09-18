@@ -62,4 +62,10 @@ if __name__ == "__main__":
             # Sleep for 10 seconds to check time precisely without consuming excessive CPU
             time.sleep(10)
     except KeyboardInterrupt:
-        print("스케줄러가 종료되었습니다.", flush=True)
+        print("스케줄러가 종료되었습니다 (KeyboardInterrupt).", flush=True)
+    except Exception as e:
+        print(f"스케줄러 에러 발생: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+    finally:
+        print("루프를 탈출하여 스크립트가 종료됩니다.", flush=True)
