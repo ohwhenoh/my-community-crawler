@@ -248,6 +248,7 @@ def check_recent_post(minutes=10):
 
 
 
+
 def get_macro_economic_data():
     try:
         fx_text = "💱 *[환율 방향 (Purchase Power Influence)]*\n"
@@ -266,8 +267,6 @@ def get_macro_economic_data():
             usd_myr, usd_myr_p = get_yahoo_full('USDMYR=X')
 
             eur_usd, eur_usd_p = get_yahoo_full('EURUSD=X')
-            eur_cny, eur_cny_p = get_yahoo_full('EURCNY=X')
-            eur_jpy, eur_jpy_p = get_yahoo_full('EURJPY=X')
             
             def get_cross(c1, c2): return c1 / c2
             
@@ -284,7 +283,11 @@ def get_macro_economic_data():
             sgd_krw, sgd_krw_p = get_cross(usd_krw, usd_sgd), get_cross(usd_krw_p, usd_sgd_p)
             sgd_usd, sgd_usd_p = get_cross(1, usd_sgd), get_cross(1, usd_sgd_p)
             
-            def fmt(amount, rate, rate_p, currency, decimals):
+            eur_krw, eur_krw_p = eur_usd * usd_krw, eur_usd_p * usd_krw_p
+            eur_cny, eur_cny_p = eur_usd * usd_cny, eur_usd_p * usd_cny_p
+            eur_jpy, eur_jpy_p = eur_usd * usd_jpy, eur_usd_p * usd_jpy_p
+            
+            def fmt(base, amount, rate, rate_p, currency, decimals):
                 val = amount * rate
                 val_p = amount * rate_p
                 diff_pct = (val - val_p) / val_p * 100
@@ -292,19 +295,17 @@ def get_macro_economic_data():
                 
                 base_str = f"{val:,.{decimals}f} {currency}"
                 
-                # 직관적 알림 추가
-                if currency == 'MYR' and amount == 100 and val >= 349.0:
-                    base_str = f"🔥 {base_str} (SGD->MYR 환전 최적기!)"
-                elif currency == 'KRW' and amount == 10000 and (val >= 2595410.0 or val >= 87760.0):
-                    base_str = f"🔥 {base_str} (혹시 남는 JPY 있으면 빨리 파세요!)"
-                elif currency == 'SGD' and amount == 10000 and val >= 81.9:
-                    base_str = f"🔥 {base_str} (JPY->SGD 환전 최적기!)"
-                elif currency == 'KRW' and amount == 100 and val >= 139000.0:
-                    base_str = f"🔥 {base_str} (달러 환전 최적기!)"
-                elif currency == 'USD' and amount == 100 and val >= 112.0:
-                    base_str = f"🔥 {base_str} (유로 환전 최적기!)"
-                elif currency == 'USD' and amount == 100000 and val >= 75.0:
-                    base_str = f"🔥 {base_str} (원화 강세 호기!)"
+                # 과거 히스토리 기반 직관적 알림 (남는 OOO 있으면 지금 파세요)
+                if base == 'SGD' and currency == 'KRW' and val >= 105000.0:
+                    base_str = f"🔥 {base_str} (남는 SGD 있으면 지금 파세요!)"
+                elif base == 'USD' and currency == 'KRW' and val >= 139000.0:
+                    base_str = f"🔥 {base_str} (남는 USD 있으면 지금 파세요!)"
+                elif base == 'EUR' and currency == 'KRW' and val >= 150000.0:
+                    base_str = f"🔥 {base_str} (남는 EUR 있으면 지금 파세요!)"
+                elif base == 'JPY' and currency == 'KRW' and (val >= 2595410.0 or val >= 87760.0):
+                    base_str = f"🔥 {base_str} (남는 JPY 있으면 빨리 파세요!)"
+                elif base == 'KRW' and currency == 'USD' and val >= 80.0:
+                    base_str = f"🔥 {base_str} (원화 초강세: 지금 외화로 환전하세요!)"
                     
                 if abs_diff >= 1.49:
                     return f"🔴 *{base_str} ({diff_pct:+.2f}%)*"
@@ -313,59 +314,38 @@ def get_macro_economic_data():
                 else:
                     return f"{base_str} ({diff_pct:+.2f}%)"
 
-            def fmt_eur(amount, rate, rate_p, currency, decimals):
-                val = amount * rate
-                val_p = amount * rate_p
-                diff_pct = (val - val_p) / val_p * 100
-                abs_diff = abs(diff_pct)
-                base_str = f"{val:,.{decimals}f} {currency}"
-                
-                if abs_diff >= 9.0:
-                    return f"🚨 *{base_str} (급변동! {diff_pct:+.2f}%)*"
-                elif abs_diff >= 1.49:
-                    return f"🔴 *{base_str} ({diff_pct:+.2f}%)*"
-                elif 0.96 <= abs_diff <= 1.48:
-                    return f"🟡 *{base_str} ({diff_pct:+.2f}%)*"
-                return f"{base_str} ({diff_pct:+.2f}%)"
-            
-            fx_text += f"• *100 SGD* = {fmt(100, sgd_myr, sgd_myr_p, 'MYR', 1)} | {fmt(100, sgd_krw, sgd_krw_p, 'KRW', 0)} | {fmt(100, sgd_usd, sgd_usd_p, 'USD', 1)}\n"
-            fx_text += f"• *10,000 JPY* = {fmt(10000, jpy_krw, jpy_krw_p, 'KRW', 0)} | {fmt(10000, jpy_sgd, jpy_sgd_p, 'SGD', 1)} | {fmt(10000, jpy_usd, jpy_usd_p, 'USD', 1)} | {fmt(10000, jpy_cny, jpy_cny_p, 'CNY', 1)}\n"
-            fx_text += f"• *100 USD* = {fmt(100, usd_krw, usd_krw_p, 'KRW', 0)} | {fmt(100, usd_sgd, usd_sgd_p, 'SGD', 1)} | {fmt(100, usd_cny, usd_cny_p, 'CNY', 1)}\n"
-            fx_text += f"• *100 EUR* = {fmt_eur(100, eur_usd, eur_usd_p, 'USD', 1)} | {fmt_eur(100, eur_cny, eur_cny_p, 'CNY', 1)} | {fmt_eur(100, eur_jpy, eur_jpy_p, 'JPY', 1)}\n"
-            fx_text += f"• *100,000 KRW* = {fmt(100000, krw_sgd, krw_sgd_p, 'SGD', 1)} | {fmt(100000, krw_usd, krw_usd_p, 'USD', 1)} | {fmt(100000, krw_cny, krw_cny_p, 'CNY', 1)}\n\n"
+            fx_text += f"• *100 SGD* = {fmt('SGD', 100, sgd_krw, sgd_krw_p, 'KRW', 0)} | {fmt('SGD', 100, sgd_myr, sgd_myr_p, 'MYR', 1)} | {fmt('SGD', 100, sgd_usd, sgd_usd_p, 'USD', 1)}\n"
+            fx_text += f"• *10,000 JPY* = {fmt('JPY', 10000, jpy_krw, jpy_krw_p, 'KRW', 0)} | {fmt('JPY', 10000, jpy_sgd, jpy_sgd_p, 'SGD', 1)} | {fmt('JPY', 10000, jpy_usd, jpy_usd_p, 'USD', 1)} | {fmt('JPY', 10000, jpy_cny, jpy_cny_p, 'CNY', 1)}\n"
+            fx_text += f"• *100 USD* = {fmt('USD', 100, usd_krw, usd_krw_p, 'KRW', 0)} | {fmt('USD', 100, usd_sgd, usd_sgd_p, 'SGD', 1)} | {fmt('USD', 100, usd_cny, usd_cny_p, 'CNY', 1)}\n"
+            fx_text += f"• *100 EUR* = {fmt('EUR', 100, eur_krw, eur_krw_p, 'KRW', 0)} | {fmt('EUR', 100, eur_usd, eur_usd_p, 'USD', 1)} | {fmt('EUR', 100, eur_cny, eur_cny_p, 'CNY', 1)} | {fmt('EUR', 100, eur_jpy, eur_jpy_p, 'JPY', 1)}\n"
+            fx_text += f"• *100,000 KRW* = {fmt('KRW', 100000, krw_usd, krw_usd_p, 'USD', 1)} | {fmt('KRW', 100000, krw_sgd, krw_sgd_p, 'SGD', 1)} | {fmt('KRW', 100000, krw_cny, krw_cny_p, 'CNY', 1)}\n\n"
         except Exception as e:
             print(f"환율 수집 에러: {e}")
             fx_text += "⚠️ 실시간 환율 정보를 가져오지 못했습니다.\n\n"
             
-        bond_text = "📉 *[시장 금리 방향 (일일 bp 변동폭)]*\n"
-        bonds = {'미국': 'IEF', '일본': '2515.T', '영국': 'IGLT.L'}
-        
-        # 듀레이션 역산: 가격 변동폭(%)을 금리 변동폭(bp)으로 치환 (10년물 평균 듀레이션 7.5~8 적용)
-        # 가격이 1% 떨어지면, 금리는 대략 12.5bp 오른 것.
-        # 즉, 가격 등락률(%) * -12.5 = 금리 bp 변동.
-        for country, ticker in bonds.items():
-            try:
-                curr_price, prev_price = get_yahoo_full(ticker)
-                price_diff_pct = (curr_price - prev_price) / prev_price * 100
+        bond_text = "📉 *[글로벌 시장 금리 (B2B 기업 투자 심리 지표)]*\n"
+        bond_text += "💡 _금리가 오르면 기업의 자금조달 비용이 증가하여, 신규 솔루션 도입(투자)을 미루고 현금 확보에 집중하는 경향이 커집니다._\n"
+        try:
+            curr_yield, prev_yield = get_yahoo_full('^TNX')
+            if curr_yield and prev_yield:
+                bp_change = (curr_yield - prev_yield) * 100
+                abs_bp = abs(bp_change)
                 
-                # 역산: 가격하락 -> 금리상승
-                yield_bp_change = price_diff_pct * -12.5
-                
-                abs_bp = abs(yield_bp_change)
-                direction = "상승 📈 (긴축/위험)" if yield_bp_change > 0 else "하락 📉 (완화/안정)"
+                direction = "상승 📈 (기업 투자 위축 우려)" if bp_change > 0 else "하락 📉 (기업 투자 심리 개선)"
                 if abs_bp < 1.0: direction = "보합 ➖"
                 
-                base_str = f"{country} 10년물 금리: {yield_bp_change:+.1f} bp {direction}"
+                base_str = f"미국 10년물 국채 금리: {curr_yield:.2f}% (전일비 {bp_change:+.1f}bp {direction})"
                 
-                if abs_bp >= 19.0:
+                if bp_change >= 19.0:
                     bond_text += f"🔴 *{base_str}*\n"
-                elif 10.0 <= abs_bp < 19.0:
+                elif bp_change >= 10.0:
                     bond_text += f"🟡 *{base_str}*\n"
                 else:
                     bond_text += f"• {base_str}\n"
-            except Exception as e:
-                print(f"Failed to fetch bond data for {country} ({ticker}): {e}")
-                continue
+            else:
+                bond_text += "⚠️ 금리 데이터 수집 불가\n"
+        except Exception as e:
+            bond_text += f"⚠️ 금리 지표 에러: {e}\n"
                 
         return fx_text + "\n" + bond_text + "\n"
     except Exception as e:
