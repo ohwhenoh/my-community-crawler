@@ -25,6 +25,7 @@ COPY app.py .
 COPY crawler_slack.py .
 COPY scheduler_daemon.py .
 COPY targets.json .
+COPY trends_cache.json .
 COPY templates/ templates/
 
 # Note: .env is not copied during build to maintain secret isolation.
