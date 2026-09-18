@@ -8,5 +8,4 @@ __pycache__/
 .DS_Store
 
 # Temporary outputs
-targets.json
 gn.html
