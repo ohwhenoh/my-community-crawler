@@ -460,19 +460,49 @@ def generate_korean_outreach_report():
         f"다단계 에이전트를 겨냥한 프롬프트 주입 공격 및 기술 데이터 유출 방지(예: 최근 보도된 *{trigger_title}* 관련 위협 대응)"
     )
     
+    import random
+    
+    # F5 특장점 로테이션 로직 추가
+    f5_differentiator_themes = [
+        {
+            "theme": "비용절감 및 ROI 극대화 (Cost & ROI)",
+            "content": (
+                "*[도입 전]* 보안/네트워크 기능별 파편화된 포인트 솔루션(WAF, API 게이트웨이, 로드밸런서 등) 운영으로 인한 라이선스 중복 및 운영 공수 과다\n"
+                "*[도입 후]* F5 XC, F5 AI, BIG-IP, NGINX로 이어지는 통합 하이브리드 아키텍처 구축 시 **평균 38% 이상의 TCO(총소유비용) 절감** 효과 기대\n"
+                "*[계산 근거]* 단일 벤더 통합 라이선싱 할인을 통한 CapEx 약 15% 절감 및, 일원화된 AI 기반 대시보드(F5 AI)를 통한 트러블슈팅 시간(MTTR) 단축으로 연간 운영 인건비(OpEx) 약 23% 절감 효과 추산"
+            )
+        },
+        {
+            "theme": "독보적 AI 보안 아키텍처 (Features & Tech)",
+            "content": (
+                "*[도입 전]* 트래픽 기반의 전통적 WAF 한계, 숨겨진 섀도우 API 방치, 정교해지는 AI 기반 악성 Bot 방어 불가\n"
+                "*[도입 후]* **BOT 방어, API Discovery, AI Powered WAF, Agent AI 거버넌스**까지 하나의 플랫폼에서 원스톱 제공\n"
+                "*[F5만의 3대 경쟁우위]*\n"
+                "  1️⃣ **Customer Edge 완벽 지원**: 단순 퍼블릭 클라우드 SaaS에 국한되지 않고, 고객사 온프레미스 망 내부에 직접 설치하여 데이터 주권(Data Sovereignty) 확보\n"
+                "  2️⃣ **글로벌 리서치 공인**: 가트너(Gartner) WAAP 매직 쿼드런트 등 외부 기관에서 지속 입증된 최상위 리더 등급 품질 (https://www.gartner.com/doc/reprints?id=00ThR00000GNFBpUAP&ct=260917&st=sb)\n"
+                "  3️⃣ **Virtual Patching**: 제로데이 취약점 발생 시, 코드 수정 없이 실시간 가상 패치를 통한 무중단 엣지(Edge) 방어망 구축"
+            )
+        }
+    ]
+    
+    selected_theme = random.choice(f5_differentiator_themes)
+    
     report_text += (
         f"\n📝 *맞춤형 세일즈 아웃리치 제안서 국문 초안 (Sample Outreach Draft)*:\n"
-        f"```"
+        f"```\n"
         f"받는 이: [담당자 성함 귀하]\n"
         f"제목: [추천 제목 중 택일]\n\n"
         f"안녕하세요, [담당자명]님.\n\n"
-        f"{outreach_body_injected}"
+        f"{outreach_body_injected}\n\n"
+        f"--- (경쟁사 대비 F5 솔루션 제안 포인트: {selected_theme['theme']}) ---\n"
+        f"{selected_theme['content']}\n"
         f"```\n"
         f"---"
     )
     return report_text
 
 def send_to_slack(message):
+
     """
     Sends the compiled Korean outreach card to Slack.
     """
