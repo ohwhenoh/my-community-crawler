@@ -30,8 +30,7 @@ if __name__ == "__main__":
     print("=" * 60, flush=True)
     
     # Run an immediate dry-run to ensure docker container connectivity on startup
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 초기 기동 접속성 검증용 드라이런 실행...", flush=True)
-    run_scraper_job()
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 초기 기동 접속성 검증용 드라이런 대기...", flush=True)
     
 
     # DR Node starts 3 minutes later
