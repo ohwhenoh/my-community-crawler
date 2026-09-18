@@ -266,9 +266,13 @@ def get_macro_economic_data():
         bond_text = "📉 *[금리 방향 (국채 가격 기반)]*\n"
         
         for country, ticker in bonds.items():
-            t = yf.Ticker(ticker)
-            hist = t.history(period="1y")
-            if len(hist) < 5:
+            try:
+                t = yf.Ticker(ticker)
+                hist = t.history(period="1y")
+                if len(hist) < 5:
+                    continue
+            except Exception as e:
+                print(f"Failed to fetch bond data for {country} ({ticker}): {e}")
                 continue
                 
             curr_price = hist['Close'].iloc[-1]
