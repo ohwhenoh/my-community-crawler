@@ -1,23 +1,4 @@
-
 services:
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: task_board_web
-    restart: unless-stopped
-    ports:
-      - "5001:5001"
-    volumes:
-      - ./.env:/app/.env:ro
-    environment:
-      - PORT=5001
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   scheduler:
     build:
       context: .
@@ -29,6 +10,23 @@ services:
       - IS_DR_NODE=True
     volumes:
       - ./.env:/app/.env:ro
+      - ./data:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: task_board_bot
+    restart: unless-stopped
+    command: ["python", "-u", "bot_daemon.py"]
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./data:/app/data
     logging:
       driver: "json-file"
       options:

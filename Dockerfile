@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy and install python dependencies
 COPY requirements.txt .
+RUN playwright install --with-deps chromium
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application source files
@@ -34,4 +36,4 @@ COPY templates/ templates/
 EXPOSE 5001
 
 # Default command can be overridden in docker-compose
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "app:app"]
+CMD ["python", "-u", "scheduler_daemon.py"]

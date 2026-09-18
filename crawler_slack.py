@@ -422,6 +422,14 @@ def generate_korean_outreach_report():
         trigger_summary = "보안 사고 원문 분석 리포트 요약 불가 (사전 정의된 시나리오로 대체됨)"
         is_live = "⚠️ 실시간 크롤링/스크래핑 예외 발생 (백업 시나리오 기동)"
         
+    # --- AI 맞춤형 세일즈 훅 생성 ---
+    print("[AI 재단사] 고객사 맥락 기반 초개인화 세일즈 훅 생성 중...")
+    personalized_hook = generate_personalized_hook(target['company'], trigger_summary)
+    
+    # --- DB에 이력 저장 (기억력 장착) ---
+    print(f"[Vector DB] {target['company']} 타깃 이력 저장 중...")
+    database.save_history(target['company'], trend_keyword, trigger_summary, personalized_hook)
+
     macro_text = get_macro_economic_data()
     
     report_text = (

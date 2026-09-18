@@ -8,3 +8,7 @@ Flask==3.0.2
 gunicorn==21.2.0
 
 yfinance==0.2.43
+slack_bolt>=1.18.0
+playwright>=1.42.0
+openai>=1.14.0
+google-generativeai>=0.4.1
