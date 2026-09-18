@@ -25,7 +25,7 @@ services:
       dockerfile: Dockerfile
     container_name: task_board_scheduler
     restart: unless-stopped
-    command: ["python", "scheduler_daemon.py"]
+    command: ["python", "-u", "scheduler_daemon.py"]
     environment:
       - IS_DR_NODE=True
     volumes:

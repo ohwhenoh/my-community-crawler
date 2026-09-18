@@ -33,6 +33,7 @@ if __name__ == "__main__":
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 초기 기동 접속성 검증용 드라이런 대기...", flush=True)
     
 
+
     # DR Node starts 3 minutes later
     import os
     is_dr = os.environ.get("IS_DR_NODE") == "True"
@@ -46,18 +47,19 @@ if __name__ == "__main__":
 
     last_trigger_date = ""
     
-    while True:
-        now = datetime.now()
-        current_time_str = now.strftime("%H:%M")
-        current_date_str = now.strftime("%Y-%m-%d")
-        
-        if current_time_str in trigger_times:
-
-            trigger_key = f"{current_date_str}_{current_time_str}"
-            if last_trigger_date != trigger_key:
-                run_scraper_job()
-                last_trigger_date = trigger_key
-                
-        # Sleep for 10 seconds to check time precisely without consuming excessive CPU
-        time.sleep(10)
-
+    try:
+        while True:
+            now = datetime.now()
+            current_time_str = now.strftime("%H:%M")
+            current_date_str = now.strftime("%Y-%m-%d")
+            
+            if current_time_str in trigger_times:
+                trigger_key = f"{current_date_str}_{current_time_str}"
+                if last_trigger_date != trigger_key:
+                    run_scraper_job()
+                    last_trigger_date = trigger_key
+                    
+            # Sleep for 10 seconds to check time precisely without consuming excessive CPU
+            time.sleep(10)
+    except KeyboardInterrupt:
+        print("스케줄러가 종료되었습니다.", flush=True)
