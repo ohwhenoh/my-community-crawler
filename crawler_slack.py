@@ -245,6 +245,7 @@ def check_recent_post(minutes=10):
 
 
 
+
 def get_macro_economic_data():
     try:
         fx_text = "💱 *[환율 방향 (Purchase Power Influence)]*\n"
@@ -256,57 +257,70 @@ def get_macro_economic_data():
                 meta = r.json()['chart']['result'][0]['meta']
                 return float(meta['regularMarketPrice']), float(meta['chartPreviousClose'])
 
-            usd_jpy, _ = get_yahoo_full('USDJPY=X')
-            usd_krw, _ = get_yahoo_full('USDKRW=X')
-            usd_sgd, _ = get_yahoo_full('USDSGD=X')
-            usd_cny, _ = get_yahoo_full('USDCNY=X')
-            usd_myr, _ = get_yahoo_full('USDMYR=X')
+            usd_jpy, usd_jpy_p = get_yahoo_full('USDJPY=X')
+            usd_krw, usd_krw_p = get_yahoo_full('USDKRW=X')
+            usd_sgd, usd_sgd_p = get_yahoo_full('USDSGD=X')
+            usd_cny, usd_cny_p = get_yahoo_full('USDCNY=X')
+            usd_myr, usd_myr_p = get_yahoo_full('USDMYR=X')
 
-            eur_usd, eur_usd_prev = get_yahoo_full('EURUSD=X')
-            eur_cny, eur_cny_prev = get_yahoo_full('EURCNY=X')
-            eur_jpy, eur_jpy_prev = get_yahoo_full('EURJPY=X')
+            eur_usd, eur_usd_p = get_yahoo_full('EURUSD=X')
+            eur_cny, eur_cny_p = get_yahoo_full('EURCNY=X')
+            eur_jpy, eur_jpy_p = get_yahoo_full('EURJPY=X')
             
-            jpy_krw = usd_krw / usd_jpy
-            jpy_sgd = usd_sgd / usd_jpy
-            jpy_usd = 1 / usd_jpy
-            jpy_cny = usd_cny / usd_jpy
+            def get_cross(c1, c2): return c1 / c2
             
-            krw_sgd = usd_sgd / usd_krw
-            krw_usd = 1 / usd_krw
-            krw_cny = usd_cny / usd_krw
+            jpy_krw, jpy_krw_p = get_cross(usd_krw, usd_jpy), get_cross(usd_krw_p, usd_jpy_p)
+            jpy_sgd, jpy_sgd_p = get_cross(usd_sgd, usd_jpy), get_cross(usd_sgd_p, usd_jpy_p)
+            jpy_usd, jpy_usd_p = get_cross(1, usd_jpy), get_cross(1, usd_jpy_p)
+            jpy_cny, jpy_cny_p = get_cross(usd_cny, usd_jpy), get_cross(usd_cny_p, usd_jpy_p)
             
-            sgd_myr = usd_myr / usd_sgd
-            sgd_krw = usd_krw / usd_sgd
-            sgd_usd = 1 / usd_sgd
+            krw_sgd, krw_sgd_p = get_cross(usd_sgd, usd_krw), get_cross(usd_sgd_p, usd_krw_p)
+            krw_usd, krw_usd_p = get_cross(1, usd_krw), get_cross(1, usd_krw_p)
+            krw_cny, krw_cny_p = get_cross(usd_cny, usd_krw), get_cross(usd_cny_p, usd_krw_p)
             
-            sgd_str = f"{jpy_sgd*10000:,.1f} SGD"
-            if jpy_sgd*10000 >= 82.0:
-                sgd_str = f"🔥 *{sgd_str} (SGD 좋은 가격입니다!)*"
+            sgd_myr, sgd_myr_p = get_cross(usd_myr, usd_sgd), get_cross(usd_myr_p, usd_sgd_p)
+            sgd_krw, sgd_krw_p = get_cross(usd_krw, usd_sgd), get_cross(usd_krw_p, usd_sgd_p)
+            sgd_usd, sgd_usd_p = get_cross(1, usd_sgd), get_cross(1, usd_sgd_p)
+            
+            def fmt(amount, rate, rate_p, currency, decimals):
+                val = amount * rate
+                val_p = amount * rate_p
+                diff_pct = (val - val_p) / val_p * 100
                 
-            krw_str = f"{jpy_krw*10000:,.0f} KRW"
-            if jpy_krw*10000 >= 8776.0:
-                krw_str = f"🔥 *{krw_str} (KRW 좋은 가격입니다!)*"
+                base_str = f"{val:,.{decimals}f} {currency}"
                 
-            myr_str = f"{sgd_myr*100:,.1f} MYR"
-            if sgd_myr*100 >= 340.0:
-                myr_str = f"🔥 *{myr_str} (MYR 좋은 가격입니다!)*"
-            
-            fx_text += f"• *10,000 JPY* = {krw_str} | {sgd_str} | {jpy_usd*10000:,.1f} USD | {jpy_cny*10000:,.1f} CNY\n"
-            fx_text += f"• *100,000 KRW* = {krw_sgd*100000:,.1f} SGD | {krw_usd*100000:,.1f} USD | {krw_cny*100000:,.1f} CNY\n"
-            fx_text += f"• *100 USD* = {usd_krw*100:,.0f} KRW | {usd_sgd*100:,.1f} SGD | {usd_cny*100:,.1f} CNY\n"
-            fx_text += f"• *100 SGD* = {myr_str} | {sgd_krw*100:,.0f} KRW | {sgd_usd*100:,.1f} USD\n"
-            
-            def get_volatility_str(price, prev):
-                diff = (price - prev) / prev * 100
-                if abs(diff) >= 9.0:
-                    return f"🔥 *{price*100:,.1f} (급변동! {diff:+.1f}%)*"
-                return f"{price*100:,.1f}"
+                if currency == 'SGD' and amount == 10000 and val >= 82.0:
+                    base_str = f"🔥 {base_str} (SGD 좋은 가격입니다!)"
+                elif currency == 'KRW' and amount == 10000 and val >= 8776.0:
+                    base_str = f"🔥 {base_str} (KRW 좋은 가격입니다!)"
+                elif currency == 'MYR' and amount == 100 and val >= 340.0:
+                    base_str = f"🔥 {base_str} (MYR 좋은 가격입니다!)"
+                    
+                if abs(diff_pct) >= 1.35:
+                    return f"🔴 *{base_str} ({diff_pct:+.2f}%)*"
+                elif abs(diff_pct) >= 0.94:
+                    return f"🟡 *{base_str} ({diff_pct:+.2f}%)*"
+                return f"{base_str}"
+
+            def fmt_eur(amount, rate, rate_p, currency, decimals):
+                val = amount * rate
+                val_p = amount * rate_p
+                diff_pct = (val - val_p) / val_p * 100
+                base_str = f"{val:,.{decimals}f} {currency}"
                 
-            eur_usd_str = get_volatility_str(eur_usd, eur_usd_prev)
-            eur_cny_str = get_volatility_str(eur_cny, eur_cny_prev)
-            eur_jpy_str = get_volatility_str(eur_jpy, eur_jpy_prev)
+                if abs(diff_pct) >= 9.0:
+                    return f"🚨 *{base_str} (급변동! {diff_pct:+.2f}%)*"
+                elif abs(diff_pct) >= 1.35:
+                    return f"🔴 *{base_str} ({diff_pct:+.2f}%)*"
+                elif abs(diff_pct) >= 0.94:
+                    return f"🟡 *{base_str} ({diff_pct:+.2f}%)*"
+                return f"{base_str}"
             
-            fx_text += f"• *100 EUR* = {eur_usd_str} USD | {eur_cny_str} CNY | {eur_jpy_str} JPY\n\n"
+            fx_text += f"• *10,000 JPY* = {fmt(10000, jpy_krw, jpy_krw_p, 'KRW', 0)} | {fmt(10000, jpy_sgd, jpy_sgd_p, 'SGD', 1)} | {fmt(10000, jpy_usd, jpy_usd_p, 'USD', 1)} | {fmt(10000, jpy_cny, jpy_cny_p, 'CNY', 1)}\n"
+            fx_text += f"• *100,000 KRW* = {fmt(100000, krw_sgd, krw_sgd_p, 'SGD', 1)} | {fmt(100000, krw_usd, krw_usd_p, 'USD', 1)} | {fmt(100000, krw_cny, krw_cny_p, 'CNY', 1)}\n"
+            fx_text += f"• *100 USD* = {fmt(100, usd_krw, usd_krw_p, 'KRW', 0)} | {fmt(100, usd_sgd, usd_sgd_p, 'SGD', 1)} | {fmt(100, usd_cny, usd_cny_p, 'CNY', 1)}\n"
+            fx_text += f"• *100 SGD* = {fmt(100, sgd_myr, sgd_myr_p, 'MYR', 1)} | {fmt(100, sgd_krw, sgd_krw_p, 'KRW', 0)} | {fmt(100, sgd_usd, sgd_usd_p, 'USD', 1)}\n"
+            fx_text += f"• *100 EUR* = {fmt_eur(100, eur_usd, eur_usd_p, 'USD', 1)} | {fmt_eur(100, eur_cny, eur_cny_p, 'CNY', 1)} | {fmt_eur(100, eur_jpy, eur_jpy_p, 'JPY', 1)}\n\n"
         except Exception as e:
             print(f"환율 수집 에러: {e}")
             fx_text += "⚠️ 실시간 환율 정보를 가져오지 못했습니다.\n\n"
