@@ -243,25 +243,46 @@ def check_recent_post(minutes=10):
 
 
 
+
 def get_macro_economic_data():
     try:
-        # 환율 데이터 수집 (안정적인 무료 API 사용)
         fx_text = "💱 *[환율 방향 (Purchase Power Influence)]*\n"
         try:
-            r_usd = requests.get('https://open.er-api.com/v6/latest/USD', timeout=10).json()['rates']
-            usd_krw, usd_sgd, usd_cny, usd_jpy = r_usd['KRW'], r_usd['SGD'], r_usd['CNY'], r_usd['JPY']
+            def get_yahoo_rate(ticker):
+                headers = {'User-Agent': 'Mozilla/5.0'}
+                url = f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&range=1d"
+                r = requests.get(url, headers=headers, timeout=5)
+                return float(r.json()['chart']['result'][0]['meta']['regularMarketPrice'])
+
+            usd_jpy = get_yahoo_rate('USDJPY=X')
+            usd_krw = get_yahoo_rate('USDKRW=X')
+            usd_sgd = get_yahoo_rate('USDSGD=X')
+            usd_cny = get_yahoo_rate('USDCNY=X')
             
-            jpy_krw, jpy_sgd, jpy_usd, jpy_cny = usd_krw/usd_jpy, usd_sgd/usd_jpy, 1/usd_jpy, usd_cny/usd_jpy
-            krw_sgd, krw_usd, krw_cny = usd_sgd/usd_krw, 1/usd_krw, usd_cny/usd_krw
+            jpy_krw = usd_krw / usd_jpy
+            jpy_sgd = usd_sgd / usd_jpy
+            jpy_usd = 1 / usd_jpy
+            jpy_cny = usd_cny / usd_jpy
             
-            fx_text += f"• *10,000 JPY* = {jpy_krw*10000:,.0f} KRW | {jpy_sgd*10000:,.1f} SGD | {jpy_usd*10000:,.1f} USD | {jpy_cny*10000:,.1f} CNY\n"
+            krw_sgd = usd_sgd / usd_krw
+            krw_usd = 1 / usd_krw
+            krw_cny = usd_cny / usd_krw
+            
+            sgd_str = f"{jpy_sgd*10000:,.1f} SGD"
+            if jpy_sgd*10000 >= 82.0:
+                sgd_str = f"🔥 *{sgd_str} (SGD 좋은 가격입니다!)*"
+                
+            krw_str = f"{jpy_krw*10000:,.0f} KRW"
+            if jpy_krw*10000 >= 8776.0:
+                krw_str = f"🔥 *{krw_str} (KRW 좋은 가격입니다!)*"
+            
+            fx_text += f"• *10,000 JPY* = {krw_str} | {sgd_str} | {jpy_usd*10000:,.1f} USD | {jpy_cny*10000:,.1f} CNY\n"
             fx_text += f"• *100,000 KRW* = {krw_sgd*100000:,.1f} SGD | {krw_usd*100000:,.1f} USD | {krw_cny*100000:,.1f} CNY\n"
-            fx_text += f"• *100 USD* = {usd_krw*100:,.0f} KRW | {usd_sgd*100:,.1f} SGD | {usd_cny*100:,.1f} CNY\n"
+            fx_text += f"• *100 USD* = {usd_krw*100:,.0f} KRW | {usd_sgd*100:,.1f} SGD | {usd_cny*100:,.1f} CNY\n\n"
         except Exception as e:
             print(f"환율 수집 에러: {e}")
-            fx_text += "⚠️ 환율 정보를 가져오지 못했습니다.\n\n"
+            fx_text += "⚠️ 실시간 환율 정보를 가져오지 못했습니다.\n\n"
             
-        # 금리(국채 가격) 데이터 수집 (Yahoo 직접 호출)
         bond_text = "📉 *[금리 방향 (국채 가격 기반)]*\n"
         bonds = {'미국': 'IEF', '일본': '2515.T', '영국': 'IGLT.L'}
         
