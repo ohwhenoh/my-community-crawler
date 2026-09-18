@@ -249,6 +249,7 @@ def check_recent_post(minutes=10):
 
 
 
+
 def get_macro_economic_data():
     try:
         fx_text = "💱 *[환율 방향 (Purchase Power Influence)]*\n"
@@ -295,7 +296,6 @@ def get_macro_economic_data():
                 
                 base_str = f"{val:,.{decimals}f} {currency}"
                 
-                # 과거 히스토리 기반 직관적 알림 (남는 OOO 있으면 지금 파세요)
                 if base == 'SGD' and currency == 'KRW' and val >= 105000.0:
                     base_str = f"🔥 {base_str} (남는 SGD 있으면 지금 파세요!)"
                 elif base == 'USD' and currency == 'KRW' and val >= 139000.0:
@@ -314,6 +314,21 @@ def get_macro_economic_data():
                 else:
                     return f"{base_str} ({diff_pct:+.2f}%)"
 
+            def fmt_eur(amount, rate, rate_p, currency, decimals):
+                val = amount * rate
+                val_p = amount * rate_p
+                diff_pct = (val - val_p) / val_p * 100
+                abs_diff = abs(diff_pct)
+                base_str = f"{val:,.{decimals}f} {currency}"
+                
+                if abs_diff >= 9.0:
+                    return f"🚨 *{base_str} (급변동! {diff_pct:+.2f}%)*"
+                elif abs_diff >= 1.49:
+                    return f"🔴 *{base_str} ({diff_pct:+.2f}%)*"
+                elif 0.96 <= abs_diff <= 1.48:
+                    return f"🟡 *{base_str} ({diff_pct:+.2f}%)*"
+                return f"{base_str} ({diff_pct:+.2f}%)"
+            
             fx_text += f"• *100 SGD* = {fmt('SGD', 100, sgd_krw, sgd_krw_p, 'KRW', 0)} | {fmt('SGD', 100, sgd_myr, sgd_myr_p, 'MYR', 1)} | {fmt('SGD', 100, sgd_usd, sgd_usd_p, 'USD', 1)}\n"
             fx_text += f"• *10,000 JPY* = {fmt('JPY', 10000, jpy_krw, jpy_krw_p, 'KRW', 0)} | {fmt('JPY', 10000, jpy_sgd, jpy_sgd_p, 'SGD', 1)} | {fmt('JPY', 10000, jpy_usd, jpy_usd_p, 'USD', 1)} | {fmt('JPY', 10000, jpy_cny, jpy_cny_p, 'CNY', 1)}\n"
             fx_text += f"• *100 USD* = {fmt('USD', 100, usd_krw, usd_krw_p, 'KRW', 0)} | {fmt('USD', 100, usd_sgd, usd_sgd_p, 'SGD', 1)} | {fmt('USD', 100, usd_cny, usd_cny_p, 'CNY', 1)}\n"
@@ -324,28 +339,50 @@ def get_macro_economic_data():
             fx_text += "⚠️ 실시간 환율 정보를 가져오지 못했습니다.\n\n"
             
         bond_text = "📉 *[글로벌 시장 금리 (B2B 기업 투자 심리 지표)]*\n"
-        bond_text += "💡 _금리가 오르면 기업의 자금조달 비용이 증가하여, 신규 솔루션 도입(투자)을 미루고 현금 확보에 집중하는 경향이 커집니다._\n"
-        try:
-            curr_yield, prev_yield = get_yahoo_full('^TNX')
-            if curr_yield and prev_yield:
-                bp_change = (curr_yield - prev_yield) * 100
-                abs_bp = abs(bp_change)
+        bond_text += "💡 _금리가 오르면 기업의 이자(대출) 부담이 묵직해져 10년 만기 장기채의 몸값(가격)은 떨어집니다._\n"
+        bond_text += "💡 _반대로 금리가 떨어지면 10년 만기 장기채는 금값이 되죠! 기업은 숨통이 트여 투자와 솔루션 도입을 다시 고민하게 됩니다._\n"
+        
+        # Real yields: US (^TNX is direct yield * 10), JP (ETF fallback or skip? Let's use direct if possible but we saw JP real yield ticker failed. Let's use ETF but translate to the metaphor requested)
+        # Using ETFs for JP and UK because direct yield tickers (^JN09.T, ^UK10Y) return None on Yahoo API for many users.
+        bonds = {'미국': 'IEF', '일본': '2515.T', '영국': 'IGLT.L'}
+        
+        for country, ticker in bonds.items():
+            try:
+                curr_price, prev_price = get_yahoo_full(ticker)
+                if not curr_price or not prev_price: continue
                 
-                direction = "상승 📈 (기업 투자 위축 우려)" if bp_change > 0 else "하락 📉 (기업 투자 심리 개선)"
-                if abs_bp < 1.0: direction = "보합 ➖"
+                # Calculate ETF Price Drop (%)
+                price_diff_pct = (curr_price - prev_price) / prev_price * 100
                 
-                base_str = f"미국 10년물 국채 금리: {curr_yield:.2f}% (전일비 {bp_change:+.1f}bp {direction})"
+                # Rule of thumb: ETF Price Drop = Yield BP Increase
+                # 10년물 듀레이션(약 7.5~8배)에 따라: -1% 가격 하락 -> 금리 약 +12.5bp 상승
+                yield_bp_change = price_diff_pct * -12.5
+                abs_bp = abs(yield_bp_change)
                 
-                if bp_change >= 19.0:
-                    bond_text += f"🔴 *{base_str}*\n"
-                elif bp_change >= 10.0:
-                    bond_text += f"🟡 *{base_str}*\n"
+                # User Metaphor: "시소 비유" + Only note "뭔가 있다!" for big moves.
+                # Average normal move: don't say much.
+                # Over +/- 9bp: something is happening.
+                
+                if yield_bp_change >= 9.0:
+                    movement_insight = "📈 금리 급상승 중 (기업 투자 긴장! 무언가 시장에 큰 충격이 있습니다)"
+                elif yield_bp_change <= -9.0:
+                    movement_insight = "📉 금리 급하락 중 (기업 숨통 트임! 솔루션 도입 논의 호기)"
                 else:
-                    bond_text += f"• {base_str}\n"
-            else:
-                bond_text += "⚠️ 금리 데이터 수집 불가\n"
-        except Exception as e:
-            bond_text += f"⚠️ 금리 지표 에러: {e}\n"
+                    movement_insight = "➖ 평균적인 변동 수준 (특이 동향 없음)"
+                
+                base_str = f"{country} 시장 금리 흐름: {movement_insight}"
+                detail_str = f"   * 비고: 국채 가격 {price_diff_pct:+.2f}% 변동 ➡️ 실제 금리 약 {yield_bp_change:+.1f}bp 변동 추정"
+                
+                if yield_bp_change >= 19.0:
+                    bond_text += f"🔴 *{base_str}*\n{detail_str}\n"
+                elif yield_bp_change >= 10.0:
+                    bond_text += f"🟡 *{base_str}*\n{detail_str}\n"
+                else:
+                    bond_text += f"• {base_str}\n{detail_str}\n"
+                    
+            except Exception as e:
+                print(f"Failed to fetch bond data for {country} ({ticker}): {e}")
+                continue
                 
         return fx_text + "\n" + bond_text + "\n"
     except Exception as e:
