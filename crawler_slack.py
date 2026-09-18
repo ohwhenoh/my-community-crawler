@@ -339,8 +339,8 @@ def get_macro_economic_data():
             fx_text += "⚠️ 실시간 환율 정보를 가져오지 못했습니다.\n\n"
             
         bond_text = "📉 *[글로벌 시장 금리 (B2B 기업 투자 심리 지표)]*\n"
-        bond_text += "💡 _금리가 오르면 기업의 이자(대출) 부담이 묵직해져 10년 만기 장기채의 몸값(가격)은 떨어집니다._\n"
-        bond_text += "💡 _반대로 금리가 떨어지면 10년 만기 장기채는 금값이 되죠! 기업은 숨통이 트여 투자와 솔루션 도입을 다시 고민하게 됩니다._\n"
+        bond_text += "💡 *[금리와 채권은 시소게임 ⚖️]* _요즘 은행 금리가 5%로 오르면, 예전에 발행된 3% 이자짜리 국채는 인기가 떨어져 '폭탄 세일(가격 하락)'을 해야만 팔립니다._\n"
+        bond_text += "💡 *[B2B 세일즈 인사이트 🎯]* _즉, '국채 금리 급등(채권값 하락)'은 시중 자금줄이 말라 기업들이 신규 투자를 미루고 지갑을 닫는다는 가장 확실한 선행 지표입니다._\n"
         
         # Real yields: US (^TNX is direct yield * 10), JP (ETF fallback or skip? Let's use direct if possible but we saw JP real yield ticker failed. Let's use ETF but translate to the metaphor requested)
         # Using ETFs for JP and UK because direct yield tickers (^JN09.T, ^UK10Y) return None on Yahoo API for many users.
