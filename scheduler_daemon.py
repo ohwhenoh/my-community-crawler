@@ -39,10 +39,10 @@ if __name__ == "__main__":
     is_dr = os.environ.get("IS_DR_NODE") == "True"
     
     if is_dr:
-        print("🔧 [DR 모드] 라즈베리파이 백업 노드로 기동되었습니다. 정각 3분 뒤에 중복 검사를 시작합니다.")
+        print("🔧 [DR 모드] 라즈베리파이 백업 노드로 기동되었습니다. 정각 3분 뒤에 중복 검사를 시작합니다.", flush=True)
         trigger_times = ["08:43", "10:53", "15:33"]
     else:
-        print("💻 [Primary 모드] 맥프로 메인 노드로 기동되었습니다.")
+        print("💻 [Primary 모드] 맥프로 메인 노드로 기동되었습니다.", flush=True)
         trigger_times = ["08:40", "10:50", "15:30"]
 
     last_trigger_date = ""
