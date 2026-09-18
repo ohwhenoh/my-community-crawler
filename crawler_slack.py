@@ -319,37 +319,22 @@ def get_macro_economic_data():
             print(f"환율 수집 에러: {e}")
             fx_text += "⚠️ 실시간 환율 정보를 가져오지 못했습니다.\n\n"
             
-        bond_text = "📉 *[금리 방향 (국채 가격 기반)]*\n"
+        bond_text = "📉 *[시장 금리 방향 (10년물 국채 ETF 일일 변동폭 기준)]*\n"
         bonds = {'미국': 'IEF', '일본': '2515.T', '영국': 'IGLT.L'}
         
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         for country, ticker in bonds.items():
             try:
-                url = f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1y"
-                r = requests.get(url, headers=headers, timeout=10)
-                data = r.json()
-                result = data['chart']['result'][0]
-                timestamps = result['timestamp']
-                closes = result['indicators']['quote'][0]['close']
+                curr_price, prev_price = get_yahoo_full(ticker)
+                diff_pct = (curr_price - prev_price) / prev_price * 100
                 
-                valid_data = [(ts, c) for ts, c in zip(timestamps, closes) if c is not None]
-                if not valid_data: continue
-                    
-                curr_price = valid_data[-1][1]
-                now_ts = datetime.utcnow().timestamp()
+                base_str = f"{country} 10년물 국채ETF: {curr_price:,.2f}"
                 
-                w1_ts = now_ts - (7 * 86400)
-                w1_data = [x for x in valid_data if x[0] >= w1_ts]
-                w1_price = w1_data[0][1] if w1_data else curr_price
-                
-                m1_ts = now_ts - (30 * 86400)
-                m1_data = [x for x in valid_data if x[0] >= m1_ts]
-                m1_price = m1_data[0][1] if m1_data else curr_price
-                
-                y1_price = valid_data[0][1]
-                
-                direction = "하락 📉" if curr_price > m1_price else "상승 📈"
-                bond_text += f"• *{country} 금리 {direction} 중* (근거: 10년물 국채ETF 가격 | 현재: {curr_price:,.2f} / 1주전: {w1_price:,.2f} / 1개월전: {m1_price:,.2f} / 1년전: {y1_price:,.2f})\n"
+                if diff_pct <= -0.41:
+                    bond_text += f"🔴 *{base_str} ({diff_pct:+.2f}%)* ➡️ 시장금리 상승(위험)\n"
+                elif diff_pct <= -0.11:
+                    bond_text += f"🟡 *{base_str} ({diff_pct:+.2f}%)* ➡️ 시장금리 소폭 상승\n"
+                else:
+                    bond_text += f"🟢 *{base_str} ({diff_pct:+.2f}%)* ➡️ 시장금리 하락/안정\n"
             except Exception as e:
                 print(f"Failed to fetch bond data for {country} ({ticker}): {e}")
                 continue
