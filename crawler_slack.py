@@ -1,5 +1,7 @@
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+import yfinance as yf
+from datetime import timedelta
 
 import os
 import urllib.request
@@ -238,6 +240,60 @@ def check_recent_post(minutes=10):
         return False
 
 
+
+def get_macro_economic_data():
+    try:
+        # 환율 데이터 수집
+        tickers = "JPYKRW=X JPYSGD=X JPYUSD=X JPYCNY=X KRWSGD=X KRWUSD=X KRWCNY=X USDKRW=X USDSGD=X USDCNY=X"
+        fx_data = yf.download(tickers, period="1d", progress=False)['Close']
+        
+        def get_fx(ticker):
+            try: return float(fx_data[ticker].iloc[-1])
+            except: return 0.0
+            
+        jpy_krw, jpy_sgd, jpy_usd, jpy_cny = get_fx('JPYKRW=X'), get_fx('JPYSGD=X'), get_fx('JPYUSD=X'), get_fx('JPYCNY=X')
+        krw_sgd, krw_usd, krw_cny = get_fx('KRWSGD=X'), get_fx('KRWUSD=X'), get_fx('KRWCNY=X')
+        usd_krw, usd_sgd, usd_cny = get_fx('USDKRW=X'), get_fx('USDSGD=X'), get_fx('USDCNY=X')
+        
+        fx_text = "💱 *[환율 방향 (Purchase Power Influence)]*\n"
+        fx_text += f"• *10,000 JPY* = {jpy_krw*10000:,.0f} KRW | {jpy_sgd*10000:,.1f} SGD | {jpy_usd*10000:,.1f} USD | {jpy_cny*10000:,.1f} CNY\n"
+        fx_text += f"• *100,000 KRW* = {krw_sgd*100000:,.1f} SGD | {krw_usd*100000:,.1f} USD | {krw_cny*100000:,.1f} CNY\n"
+        fx_text += f"• *100 USD* = {usd_krw*100:,.0f} KRW | {usd_sgd*100:,.1f} SGD | {usd_cny*100:,.1f} CNY\n\n"
+        
+        # 금리(국채 가격) 데이터 수집
+        # 미국: IEF, 일본: 2515.T, 영국: IGLT.L
+        bonds = {'미국': 'IEF', '일본': '2515.T', '영국': 'IGLT.L'}
+        bond_text = "📉 *[금리 방향 (국채 가격 기반)]*\n"
+        
+        for country, ticker in bonds.items():
+            t = yf.Ticker(ticker)
+            hist = t.history(period="1y")
+            if len(hist) < 5:
+                continue
+                
+            curr_price = hist['Close'].iloc[-1]
+            try:
+                w1_price = hist.loc[hist.index >= (hist.index[-1] - timedelta(days=7))]['Close'].iloc[0]
+            except: w1_price = curr_price
+            
+            try:
+                m1_price = hist.loc[hist.index >= (hist.index[-1] - timedelta(days=30))]['Close'].iloc[0]
+            except: m1_price = curr_price
+            
+            try:
+                y1_price = hist['Close'].iloc[0]
+            except: y1_price = curr_price
+            
+            # 가격이 올랐으면 금리는 하락 (반비례)
+            direction = "하락 📉" if curr_price > m1_price else "상승 📈"
+            
+            bond_text += f"• *{country} 금리 {direction} 중* (근거: 10년물 국채ETF 가격 | 현재: {curr_price:,.2f} / 1주전: {w1_price:,.2f} / 1개월전: {m1_price:,.2f} / 1년전: {y1_price:,.2f})\n"
+            
+        return fx_text + "\n" + bond_text + "\n"
+    except Exception as e:
+        print(f"거시경제 데이터 수집 실패: {e}")
+        return "⚠️ 거시경제 지표 실시간 수집 지연\n\n"
+
 def generate_korean_outreach_report():
     import json
     with open('targets.json', 'r', encoding='utf-8') as f:
@@ -271,11 +327,15 @@ def generate_korean_outreach_report():
         trigger_summary = "보안 사고 원문 분석 리포트 요약 불가 (사전 정의된 시나리오로 대체됨)"
         is_live = "⚠️ 실시간 크롤링/스크래핑 예외 발생 (백업 시나리오 기동)"
         
+    macro_text = get_macro_economic_data()
+    
     report_text = (
         f"🎯 *[일일 대한민국 세일즈 인텔리전스 리포트 - F5 AI Security]*\n"
         f"📅 _발행 일시: {datetime.now().strftime('%Y-%m-%d %H:%M')}_\n"
         f"📡 _수집 상태: {is_live}_\n\n"
+        f"{macro_text}"
         f"🚀 *[B2B Sales Targeting Intelligence]*\n"
+
         f"🏢 *최우선 공략 기업*: *{target['company']}* ({target['sector']})\n"
         f"📊 *선정 사유*: {trend_reason}\n"
         f"🔍 *F5 CRM 사전 교감 데이터 (CRM Context)*:\n"
