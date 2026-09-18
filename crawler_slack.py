@@ -344,7 +344,7 @@ def get_macro_economic_data():
         
         # Real yields: US (^TNX is direct yield * 10), JP (ETF fallback or skip? Let's use direct if possible but we saw JP real yield ticker failed. Let's use ETF but translate to the metaphor requested)
         # Using ETFs for JP and UK because direct yield tickers (^JN09.T, ^UK10Y) return None on Yahoo API for many users.
-        bonds = {'미국': 'IEF', '일본': '2515.T', '영국': 'IGLT.L'}
+        bonds = {'미국': 'IEF', '일본': '2515.T', '영국': 'IGLT.L', '중국': '2829.HK', '벨기에(유로존)': 'MTH.PA', '캐나다': 'XGB.TO'}
         
         for country, ticker in bonds.items():
             try:
