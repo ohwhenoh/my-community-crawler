@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A minimalist, modern team task board for tracking project status and assignments.">
+    <title>{{ board_name }} - Team Task Board</title>
+    <!-- Modern Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Sleek Neutral Palette */
+            --bg-color: #f8fafc; /* Very light slate-gray background */
+            --card-bg: #ffffff;
+            --text-main: #0f172a; /* Slate 900 for dark, high-contrast text */
+            --text-muted: #64748b; /* Slate 500 for secondary details */
+            --border-color: #e2e8f0; /* Slate 200 for clean subtle borders */
+            --glow-color: rgba(99, 102, 241, 0.06);
+
+            /* Harmonious Low-Contrast Status Badges */
+            --status-todo-bg: #f1f5f9;
+            --status-todo-text: #475569;
+            --status-inprogress-bg: #fff7ed;
+            --status-inprogress-text: #ea580c;
+            --status-completed-bg: #f0fdf4;
+            --status-completed-text: #16a34a;
+
+            /* Modern Indigo/Violet Brand Gradients */
+            --brand-start: #4f46e5;
+            --brand-end: #6366f1;
+            
+            /* Custom Scrollbar colors */
+            --scrollbar-bg: #f1f5f9;
+            --scrollbar-thumb: #cbd5e1;
+        }
+
+        /* Basic Reset & Optimization */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Semantic Header with subtle dark premium finish and micro glow */
+        header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            padding: 3.5rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+            pointer-events: none;
+            animation: pulse-glow 8s infinite alternate ease-in-out;
+        }
+
+        @keyframes pulse-glow {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 10;
+        }
+
+        header h1 {
+            font-size: 2.75rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            font-size: 1.125rem;
+            color: #94a3b8;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+
+        /* Content Area */
+        main {
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 3.5rem 2rem;
+        }
+
+        /* Grid Layout */
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        /* Card Component - Glassmorphism effects with premium shadow and transition */
+        .task-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.75rem;
+            box-shadow: 0 4px 10px -1px rgba(15, 23, 42, 0.03), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .task-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 100% 100%, var(--glow-color) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+
+        .task-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 10px 10px -5px rgba(15, 23, 42, 0.03);
+            border-color: #cbd5e1;
+        }
+
+        .task-card:hover::after {
+            opacity: 1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        /* Beautiful low-contrast badges */
+        .status-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.35rem 0.85rem;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+        }
+
+        .status-badge::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .status-todo {
+            background-color: var(--status-todo-bg);
+            color: var(--status-todo-text);
+        }
+        .status-todo::before {
+            background-color: var(--status-todo-text);
+        }
+
+        .status-inprogress {
+            background-color: var(--status-inprogress-bg);
+            color: var(--status-inprogress-text);
+        }
+        .status-inprogress::before {
+            background-color: var(--status-inprogress-text);
+        }
+
+        .status-completed {
+            background-color: var(--status-completed-bg);
+            color: var(--status-completed-text);
+        }
+        .status-completed::before {
+            background-color: var(--status-completed-text);
+        }
+
+        .task-id {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .card-body h3 {
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: var(--text-main);
+            line-height: 1.4;
+            letter-spacing: -0.015em;
+            margin-bottom: 2rem;
+        }
+
+        /* Footer of card containing Assignee and action button */
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: auto;
+        }
+
+        /* Beautiful user avatar profile card */
+        .assignee {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--brand-start) 0%, var(--brand-end) 100%);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.15);
+        }
+
+        .assignee-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .assignee-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .assignee-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        /* Premium "Mark as Complete" Action Button with micro-interactions */
+        .btn-complete {
+            background: #ffffff;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.6rem 1.1rem;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            outline: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-complete:hover {
+            background: var(--text-main);
+            color: #ffffff;
+            border-color: var(--text-main);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px -3px rgba(15, 23, 42, 0.15);
+        }
+
+        .btn-complete:active {
+            transform: translateY(1px);
+        }
+
+        /* Footer copyright area */
+        footer {
+            text-align: center;
+            padding: 2.5rem 2rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            border-top: 1px solid var(--border-color);
+            background: #ffffff;
+            margin-top: auto;
+        }
+
+        footer p {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 640px) {
+            header {
+                padding: 2.5rem 1.5rem;
+            }
+            header h1 {
+                font-size: 2rem;
+            }
+            main {
+                padding: 2rem 1rem;
+            }
+            .board-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Semantic Header with Dynamic Glow Background -->
+    <header>
+        <div class="header-content">
+            <h1 id="board-title">{{ board_name }}</h1>
+            <p>Streamlining tasks, progress, and performance across the workspace</p>
+        </div>
+    </header>
+
+    <!-- Main Content Task Board -->
+    <main>
+        <div class="board-grid" id="task-board-container">
+            {% for task in tasks %}
+            <article class="task-card" id="task-{{ task.id }}">
+                <div class="card-header">
+                    <span class="task-id">#TSK-00{{ task.id }}</span>
+                    <!-- Color-Coded Status Badge -->
+                    {% if task.status == 'Completed' %}
+                    <span class="status-badge status-completed">{{ task.status }}</span>
+                    {% elif task.status == 'In Progress' %}
+                    <span class="status-badge status-inprogress">{{ task.status }}</span>
+                    {% else %}
+                    <span class="status-badge status-todo">{{ task.status }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="card-body">
+                    <h3>{{ task.title }}</h3>
+                </div>
+                
+                <div class="card-footer">
+                    <!-- Assignee with Gradient Initials Avatar -->
+                    <div class="assignee">
+                        <div class="avatar">{{ task.assignee[0] }}</div>
+                        <div class="assignee-info">
+                            <span class="assignee-label">Assignee</span>
+                            <span class="assignee-name">{{ task.assignee }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Button -->
+                    <button type="button" class="btn-complete" id="btn-complete-{{ task.id }}" onclick="notifyUpdate('{{ task.title }}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Mark as Complete
+                    </button>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2026 Team Project Alpha Board • Crafted with passion for modern visual excellence</p>
+    </footer>
+
+    <!-- Interactive Logic Script -->
+    <script id="board-interactions">
+        function notifyUpdate(taskTitle) {
+            // Emulate backend update notification as requested by user
+            alert("Task updated!");
+        }
+    </script>
+</body>
+</html>

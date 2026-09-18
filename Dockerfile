@@ -1,0 +1,35 @@
+# ==============================================================================
+# Multi-Architecture Production Dockerfile (Debian ARM & Ubuntu x86-64 Compatible)
+# ==============================================================================
+FROM python:3.11-slim
+
+# Set timezone and production-grade environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV TZ=Asia/Seoul
+
+WORKDIR /app
+
+# Install system dependencies (including timezone configuration)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tzdata \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application source files
+COPY app.py .
+COPY crawler_slack.py .
+COPY scheduler_daemon.py .
+COPY templates/ templates/
+
+# Note: .env is not copied during build to maintain secret isolation.
+# It will be mounted via docker-compose volume for absolute security.
+
+EXPOSE 5001
+
+# Default command can be overridden in docker-compose
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "app:app"]

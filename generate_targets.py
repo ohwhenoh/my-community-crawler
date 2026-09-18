@@ -1,0 +1,270 @@
+# -*- coding: utf-8 -*-
+import json
+
+# Existing 12 targets (2 per sector)
+base_targets = [
+    {
+        "sector": "2차전지 (Secondary Battery)",
+        "company": "LG에너지솔루션",
+        "value_hook": "스마트팩토리 제어 및 배터리 셀 레시피를 분석하는 생성형 AI 에이전트는 정적 RBAC(권한 제어)만으로 보호할 수 없습니다. F5 AISP는 인라인 런타임 가드레일을 통해 모델에 주입되는 명령의 출처를 검증하고 원자재 공식 및 영업 비밀의 무단 유출(Data Harvesting)을 실시간 차단합니다.",
+        "proof_point": "팔란티어(Palantir)는 전사 AI 플랫폼(AIP) 전반에 걸쳐 런타임 프롬프트 주입 및 핵심 데이터 유출을 방지하기 위해 F5 AI Security Platform을 전격 도입하여 대규모 성능과 안전성을 검증했습니다.",
+        "personas": [
+            {"role": "최고정보보호책임자 (CISO)", "name": "{company} CISO (정보보안위원회 총괄 임원)"},
+            {"role": "스마트팩토리 / AI 플랫폼 리더", "name": "{company} Smart Factory AI R&D 본부장"}
+        ],
+        "subjects": [
+            "배터리 스마트팩토리 AI 에이전트 보안 & '의도 vs 신원' 검증 격차 해소방안",
+            "{company} 제조 AI 보안 고도화: F5 AI Security + Palantir AIP 레퍼런스",
+            "정적 권한제어(RBAC)를 넘어선 배터리 생산 공정 생성형 AI 실시간 가드레일 도입"
+        ],
+        "outreach_body": "최근 {company}이(가) 생산 공정 및 스마트팩토리 운영에 자율형 AI 에이전트 도입을 가속화함에 따라, 다단계 에이전트를 겨냥한 간접 프롬프트 주입(Indirect Injection) 및 기술 데이터 유출 방지가 기업의 핵심 당면 과제로 부상하고 있습니다.\n\n기존의 정적 권한 제어(RBAC)는 적법한 사용자의 '신원'은 검증하지만, AI가 수집하는 외부 데이터나 입력값에 섞여 들어오는 악의적인 '명령의 출처'는 검증하지 못합니다. 즉, 합법적인 사용자 권한을 도용하여 배터리 레시피 및 핵심 영업 비밀을 외부로 유출하는 공격에 무방비할 수 있습니다.\n\n팔란티어(Palantir)는 전사 AI 플랫폼인 AIP 보안을 위해 F5 AI Security Platform을 도입하여 런타임 프롬프트 제어 문제를 성공적으로 해결했습니다.\n\nF5의 런타임 보안 및 AI Red Teaming은 기업이 생성형 AI 서비스에 대한 실시간 위협 감지와 자동화된 모의 침투 테스트를 가동할 수 있도록 지원합니다. 관련하여 당사의 글로벌 성공 사례를 바탕으로 짧은 미팅을 제안드립니다.",
+        "fallback_trigger_title": "제조 스마트팩토리 거대언어모델(LLM) 대상 간접 프롬프트 주입 공격 및 기술 유출 위협",
+        "fallback_trigger_url": "https://www.csoonline.com/article/4207306/one-click-flaw-in-atlassian-rovo-exposed-enterprise-data-via-prompt-injection-attack.html"
+    },
+    {
+        "sector": "2차전지 (Secondary Battery)",
+        "company": "에코프로",
+        "value_hook": "RAG(검색 증강 생성) 기반 전구체 배합비 도출 AI 비서는 정형 데이터 유출 모니터링을 무력화할 수 있습니다. F5 AISP는 인라인에서 LLM 모델의 의도와 출력 텍스트를 실시간 난독화 및 검증함으로써 국가핵심기술 유출을 완벽 통제합니다.",
+        "proof_point": "팔란티어(Palantir)는 자사 국방급 분석 플랫폼의 안전한 데이터 연동을 검증하기 위해 F5 AI Security Platform을 탑재하여 런타임 위협 제어 규격을 준수하고 있습니다.",
+        "personas": [
+            {"role": "정보보호 최고임원 (CISO)", "name": "{company} 정보보호 최고책임자 및 임원진"},
+            {"role": "스마트팩토리 인프라 총괄", "name": "{company} IT 인프라/생산 자동화 본부장"}
+        ],
+        "subjects": [
+            "차세대 양극재 배합비 기밀 사수: 생성형 AI RAG 보안 및 프롬프트 인젝션 차단기술",
+            "{company} 제조 지능화 자산 방어: F5 AI Security + Palantir AIP 보안 표준",
+            "생산라인 AI 비서 안전성 확보를 위한 인라인 런타임 가드레일 도입 세션 제안"
+        ],
+        "outreach_body": "양극재 시장에서 독보적 기술력으로 시장을 선도하는 {company}의 생산 및 R&D 지능화 환경에서, 내부 핵심 배합 기밀 보호를 위한 '생성형 AI 전용 보안망' 도입이 시급한 화두로 떠오르고 있습니다.\n\nAI 기반 배합비 분석 에이전트가 오염된 원자재 리포트 문서를 기계적으로 가공하는 과정에서 간접 프롬프트 공격에 노출되면, 차세대 니켈 전구체 배합 비율과 같은 핵심 국가기술 데이터가 이상 트래픽 없이 정교한 텍스트 형태로 외부로 유출될 수 있습니다.\n\n글로벌 1티어 인프라 자산 분석의 최고 권위자인 팔란티어(Palantir) 역시 이와 같은 런타임 우회 공격 리스크를 F5 AI Security Platform 탑재를 통해 완벽히 해결했습니다.\n\nF5의 런타임 보안 아키텍처는 {company}의 AI 시스템이 정해진 사내 업무 규정 범위 안에서만 기술 유출 데이터를 실시간 필터링하도록 설계되어 최고의 안전성을 공급합니다. 이와 관련한 상세한 제안을 전해 드리고자 합니다.",
+        "fallback_trigger_title": "양극재 생산 공정 분석용 RAG AI 대상 우회 명령 주입 및 차세대 전구체 비율 데이터 유출 우려",
+        "fallback_trigger_url": "https://www.csoonline.com/article/4207306/one-click-flaw-in-atlassian-rovo-exposed-enterprise-data-via-prompt-injection-attack.html"
+    },
+    {
+        "sector": "제약 및 바이오 헬스케어 (Pharma & Bio)",
+        "company": "삼성바이오로직스",
+        "value_hook": "신약 합성 화학식 및 독성 테스트 결과를 자율 추출하는 제약 임베딩 에이전트는 전통적 데이터 보호 솔루션의 감시를 우회합니다. F5 AISP는 인라인 실시간 감시 엔진을 통해 특허 물질 정보가 프롬프트 가로채기(Data Exfiltration)를 통해 불법 유출되는 경로를 실시간 차단합니다.",
+        "proof_point": "팔란티어(Palantir)는 자사 국방 및 제약 분석 플랫폼(AIP)의 강력한 런타임 프롬프트 보호 및 기밀 데이터 유출 방지를 위해 F5 AI Security Platform을 도입하여 상용 구동 중입니다.",
+        "personas": [
+            {"role": "글로벌 정보보호책임자 (CISO)", "name": "{company} CISO (보안전담 본부장)"},
+            {"role": "디지털 혁신 / AI 플랫폼 리더", "name": "{company} 글로벌고객지원 및 디지털혁신 임원"}
+        ],
+        "subjects": [
+            "제약/바이오 R&D AI 에이전트 보안 & 물질 특허 유출 원천 차단 방안",
+            "{company} CDMO 기술 자산 보호: F5 AI Security + Palantir AIP 검증 사례",
+            "특허 데이터 검증: 생성형 AI 도입에 따른 인라인 런타임 가드레일 수립"
+        ],
+        "outreach_body": "글로벌 바이오 CDMO 리더인 {company}의 신약 개발 및 공정 디지털 전환 여정에서, 자율형 AI 에이전트와 분석 플랫폼의 프롬프트 주입 공격 방어가 정보보안 부문의 새로운 화두로 떠오르고 있습니다.\n\nAI 에이전트가 신약 화학식이나 임상 시험 문서를 정밀 분석하는 과정에서 신뢰할 수 없는 데이터가 입력될 경우, 사용자도 모르게 데이터가 탈취되거나 외부 악성 서버로 특허 데이터가 유출되는 심각한 상황이 발생할 수 있습니다. 이는 기존 DB 방화벽이나 RBAC으로는 사전에 감지할 수 없는 런타임 영역의 홀(Hole)입니다.\n\n글로벌 제약/군사 분석 분야의 선두주자인 팔란티어(Palantir) 역시 이 리스크를 F5 AI Security Platform 구축을 통해 완벽하게 해결했습니다.\n\nF5의 AI Red Teaming 및 실시간 런타임 엔진은 특허 물질 정보와 민감한 임상 설계 정보가 AI 분석 프로세스 밖으로 흐르는 단계를 인라인 상에서 모니터링하고 제어합니다. 귀사의 글로벌 핵심 자산 보호를 위해 미팅 세션을 마련하고 싶습니다.",
+        "fallback_trigger_title": "신약 개발 및 물질 특허 분석 AI 대상 프롬프트 인젝션 및 지식재산권(IP) 수집 유출 우려",
+        "fallback_trigger_url": "https://www.darkreading.com/vulnerabilities-threats/indirect-prompt-injection-copilot-studio-tenant-leak"
+    },
+    {
+        "sector": "제약 및 바이오 헬스케어 (Pharma & Bio)",
+        "company": "셀트리온",
+        "value_hook": "임상 시험 및 바이오시밀러 개발 파이프라인 데이터베이스와 결합된 자율형 에이전트는 프롬프트 조작을 통한 독점 데이터 대량 추출의 표적이 되기 쉽습니다. F5 AISP는 인라인 데이터 유출 가드레일을 통해 에이전트 출력 단계를 제어하여 기밀 정보의 오남용을 원천 방지합니다.",
+        "proof_point": "팔란티어(Palantir)는 헬스케어 분석 솔루션 전반의 환자 데이터 및 기업 R&D 지적재산 보호를 위해 F5 AI Security Platform을 핵심 엔진으로 연계하여 전 세계 사업장에 안전하게 배포하고 있습니다.",
+        "personas": [
+            {"role": "정보보호 최고책임자 (CISO)", "name": "{company} 정보보호본부 최고책임자"},
+            {"role": "바이오 R&D 정보전략 실장", "name": "{company} 신약개발/생명공학 연구기획 그룹장"}
+        ],
+        "subjects": [
+            "바이오시밀러 R&D 파이프라인 수호: 생성형 AI 런타임 인젝션 해킹 방지 대책",
+            "{company} 바이오 자산 무결성 보장: F5 AI Security + Palantir AIP 보안 레퍼런스",
+            "임상시험 정보 수집 차단: 보안 정합성을 충족하는 LLM 가드레일 아키텍처 제안"
+        ],
+        "outreach_body": "글로벌 바이오 제약 시장을 개척하고 있는 {company}의 대규모 임상 R&D 및 글로벌 의사결정 프로세스에 도입된 생성형 AI 비서 시스템에 대해, 악의적인 명령을 통한 특허 유출 방지가 기획 및 보안 부서의 핵심 선결 과제로 다루어지고 있습니다.\n\nAI 분석 도구가 다양한 원문 임상 리포트와 연구 기록을 스캔하는 과정에서 간접 인젝션 공격이 탑재될 경우, 바이오시밀러 설계 파이프라인과 같은 중요 연구 자산이 중요 통제 없이 노출될 위험이 큽니다.\n\n전 세계 공공 및 헬스케어 대기업 플랫폼을 장악하고 있는 팔란티어(Palantir) 역시 이와 같은 보안 취약점을 극복하기 위해 F5 AI Security Platform을 내장하여 안전성을 상시 증명하고 있습니다.\n\nF5의 AI Security를 통해 {company}의 차세대 바이오 엔진이 정해진 사내 업무 규정 범위 안에서만 작동하도록 실시간 가드레일을 수립하는 방안을 제안해 드립니다.",
+        "fallback_trigger_title": "임상 시험 데이터 및 유전자 서열 검색 AI 대상 프롬프트 인젝션 우회 및 파이프라인 기밀 유출",
+        "fallback_trigger_url": "https://www.darkreading.com/vulnerabilities-threats/indirect-prompt-injection-copilot-studio-tenant-leak"
+    },
+    {
+        "sector": "게임 (Gaming)",
+        "company": "크래프톤",
+        "value_hook": "AI 기반 동적 플레이어 상호작용 및 소스 분석 에이전트가 인젝션 공격에 노출되면 게임 내 자산 불법 복사, 서버 자격 증명(Credential) 유출, 게임 빌드 소스 노출로 이어집니다. F5 AISP는 게임 내부 트랜잭션 경계를 완벽히 보호하는 강력한 인라인 필터링을 공급합니다.",
+        "proof_point": "팔란티어(Palantir)는 자사 대규모 멀티 에이전트 AI 프레임워크 전반의 명령어 조작 우회 공격을 제압하고 런타임 제어 무결성을 획득하기 위해 F5 AI Security Platform을 활용하고 있습니다.",
+        "personas": [
+            {"role": "정보보호최고책임자 (CISO)", "name": "{company} 정보보호본부장 / CISO"},
+            {"role": "AI / 딥러닝 기술 리더", "name": "{company} 딥러닝/AI Lab 본부장"}
+        ],
+        "subjects": [
+            "게임 AI 에이전트 및 소스 빌드 보안: 명령어 조작 하이재킹 무력화 기술",
+            "{company} 글로벌 게임 자산 보호: F5 AI Security + Palantir AIP 성공 사례",
+            "동적 NPC 및 개발 Copilot 보안: 정적 통제를 넘어선 런타임 가드레일"
+        ],
+        "outreach_body": "글로벌 시장에서 혁신을 지속 중인 {company}의 AI/딥러닝 기반 게임 제작 환경 및 지능형 NPC 고도화 과정에서 생성형 AI 시스템 보안 수립이 중대 해결 과제로 거론되고 있습니다.\n\nAI가 게임 빌드 데이터를 학습하거나 실시간 동적 게임 세션에 개입하는 환경에서, 특수하게 설계된 유저 프롬프트가 유입되면 AI 시스템이 오동작하여 게임 소스코드를 원격으로 누설하거나 서버 권한을 해킹당하는 중대한 사고가 발생할 수 있습니다.\n\n정밀 데이터 연동 플랫폼의 최고 권위자인 팔란티어(Palantir)는 자사 AIP 생태계를 보호하기 위해 F5 AI Security Platform을 도입하여 인라인 가드레일 체계를 정교하게 완비했습니다.\n\nF5의 자동화된 AI Red Teaming은 {company}이(가) 구현하는 다양한 생성형 AI 엔진에 대해 상시 모의 공격을 수행하고, 런타임 취약점을 선제 탐지하여 조치할 수 있도록 돕습니다. 보안 강화 전략에 대해 논의를 희망합니다.",
+        "fallback_trigger_title": "자율 생성형 AI NPC 및 게임 개발 에이전트 대상 명령 하이재킹 및 빌드 소스코드 유출",
+        "fallback_trigger_url": "https://www.csoonline.com/article/3547214/prompt-injection-vulnerability-disclosed-in-major-saas-copilot.html"
+    },
+    {
+        "sector": "게임 (Gaming)",
+        "company": "넷마블",
+        "value_hook": "게임 기획 및 사내 QA 자동화 봇에 대한 프롬프트 조작 공격은 출시되지 않은 일러스트 및 신규 업데이트 소스 데이터 유설의 원인이 됩니다. F5 AISP는 인라인 가드레일을 구동하여 소스코드 및 개발 기획안에 대한 비정상적인 의도 파악과 접근을 즉각 무력화합니다.",
+        "proof_point": "팔란티어(Palantir)는 대규모 자율형 에이전트 클러스터 내에서 발생할 수 있는 내부 자산 원격 가로채기 위협을 사전에 조율하기 위해 F5 AI Security Platform의 실시간 패킷 검사 가드레일을 기본 도입했습니다.",
+        "personas": [
+            {"role": "정보보호 책임임원 (CISO)", "name": "{company} 정보보안실 최고책임자"},
+            {"role": "AI 개발 총괄 디렉터", "name": "{company} AI 연구개발 / 지능형 서비스 실장"}
+        ],
+        "subjects": [
+            "인게임 밸런스 수호 및 미공개 애셋 기밀성 유지: 생성형 AI QA 자동화 봇 전용 보안",
+            "{company} 차세대 퍼블리싱 AI 사수: F5 AI Security + Palantir AIP 아키텍처 사례",
+            "동적 AI 시스템 조작 예방: 런타임 상의 악의적 의도 차단 기술 제안"
+        ],
+        "outreach_body": "글로벌 모바일 게임 및 지능형 퍼블리싱 기술로 도약해 나가는 {company}의 사내 게임 개발 혁신 프로세스 및 동적 기획 보조 봇 고도화 국면에서 생성형 AI 시스템 무결성 제어가 정보보호본부의 새로운 어젠다로 정립되고 있습니다.\n\n개발 테스트 자동화에 투입된 AI 에이전트 시스템이 웹상에서 악의적인 유저 리포트 버그 파일이나 임시 텍스트 리소스를 파싱할 때 간접 프롬프트 공격에 감염될 수 있습니다. 이로 인해 미출시 그래픽 자산이나 밸런싱 수치 데이터가 불법 노출될 리스크가 상존합니다.\n\n글로벌 엔터프라이즈 정합성 통제에 독보적인 팔란티어(Palantir)는 이 같은 AI 탈취 위협을 원천 차단하기 위해 F5 AI Security Platform을 내장하여 런타임 제어 설정을 성공적으로 구축했습니다.\n\nF5의 AI Security 제품군은 {company}이(가) 제작하는 모든 테스트 봇과 코파일럿 서비스가 정해진 안전 규정 안에서만 움직이도록 보호합니다. 관련하여 상세한 성공 방안을 제안드리고자 합니다.",
+        "fallback_trigger_title": "AI 기반 게임 테스트 봇 및 기획 보조 도구 조작을 통한 인게임 경제 밸런스 붕괴 및 미공개 애셋 유출 위협",
+        "fallback_trigger_url": "https://www.csoonline.com/article/3547214/prompt-injection-vulnerability-disclosed-in-major-saas-copilot.html"
+    },
+    {
+        "sector": "AI 스타트업 (AI Startup)",
+        "company": "업스테이지",
+        "value_hook": "자체 LLM 및 대규모 데이터 검색 연동 시스템(RAG)을 설계하는 독자 스타트업 모델은 미세조정 데이터 유출 및 에이전트 우회 조작 공격에 특히 취약합니다. F5 AISP는 데이터 오염 및 모델 탈취 시도를 차단하는 전문 엔터프라이즈급 실시간 차단 기술을 가동합니다.",
+        "proof_point": "팔란티어(Palantir)는 자사 인공지능 기반 분석 코어망을 악의적인 모델 파라미터 조작 및 데이터 오염(Poisoning) 위협으로부터 방어하고자 F5 AI Security Platform을 전격 탑재했습니다.",
+        "personas": [
+            {"role": "공동창립자 겸 대표이사 (CEO)", "name": "{company} 대표이사 / CEO"},
+            {"role": "코어 AI 엔지니어링 리더", "name": "{company} Core AI 개발 책임자"}
+        ],
+        "subjects": [
+            "LLM 파인튜닝 데이터 오염 차단 및 스타트업 고유 모델 기밀성 확보 기술",
+            "{company} LLM 모델 자산 보안: F5 AI Security + Palantir AIP 보안 참조",
+            "멀티에이전트 RAG 데이터 가로채기 차단: 엔터프라이즈급 인라인 런타임 가드레일"
+        ],
+        "outreach_body": "엔터프라이즈 AI 시장의 주도권을 확보해 나가고 계시는 {company}의 기업 전용 LLM 구축 및 RAG 비즈니스 전개에 보안 수립은 최고의 경쟁력입니다.\n\n대다수의 기업 고객들은 자체 보유한 핵심 데이터를 스타트업의 LLM에 연동할 때 발생할 수 있는 '간접 프롬프트 주입을 통한 데이터 유출' 및 '학습 원본 데이터 노출' 리스크에 대해 우려하고 있습니다. 이는 단순한 내부 보안망 설계만으로는 한계가 명확합니다.\n\n정부 및 국방 등 극도의 보안 환경에서 자율 에이전트 분석 플랫폼을 납품하는 팔란티어(Palantir) 역시 자사 AIP 플랫폼의 데이터 안전성을 확실하게 검증하고 입증하기 위해 F5 AI Security Platform을 기본 솔루션으로 채택했습니다.\n\nF5의 AI Security를 통해 {company} 솔루션의 기밀 데이터 경계를 한층 더 완벽하게 제어함으로써, 대기업 고객을 대상으로 한 B2B LLM 세일즈에서 비교 우위의 기술적 안전성을 무기로 확보하실 수 있습니다. 이와 관련한 기술 제휴 협력에 대해 대화 나누고 싶습니다.",
+        "fallback_trigger_title": "거대언어모델(LLM) 파인튜닝 학습 데이터 오염 및 멀티에이전트 조작 기술 유출 공격",
+        "fallback_trigger_url": "https://antigravity.google/docs/mcp"
+    },
+    {
+        "sector": "AI 스타트업 (AI Startup)",
+        "company": "리벨리온",
+        "value_hook": "AI 가속기(NPU) 컴파일러 설계 및 온디바이스 연동용 생성형 AI 솔루션은 핵심 칩 설계 기밀에 대한 인젝션 기반 유출 공격에 크게 취약합니다. F5 AISP는 NPU 하드웨어 특화 컴파일러 소스 보호를 보증하는 특수화된 인라인 런타임 검사 패키지를 공급합니다.",
+        "proof_point": "팔란티어(Palantir)는 극보안의 미국 인프라 및 스마트 국방 제어용 AI 분석 파이프라인의 핵심 자산 침해 시도를 원천 전수 차단하고자 F5 AI Security Platform의 실시간 방화 시스템을 결합했습니다.",
+        "personas": [
+            {"role": "공동창립자 겸 대표이사 (CEO)", "name": "{company} 대표이사 / CEO"},
+            {"role": "NPU 하드웨어/소프트웨어 엔지니어링 리더", "name": "{company} 칩 컴파일러 개발 연구소장"}
+        ],
+        "subjects": [
+            "대한민국 AI 반도체 컴파일러 원천 설계 보안: NPU 코어 기밀성 고도화 방안",
+            "{company} 글로벌 가속기 시장 공략: F5 AI Security + Palantir AIP 보안 레퍼런스",
+            "온디바이스 가속 기술 보호: 런타임 제약 조건을 완전히 준수하는 LLM 필터 엔진"
+        ],
+        "outreach_body": "글로벌 고성능 AI 가속기 시장에서 대한민국 기술력의 정수를 보여주며 혁신을 견인하시는 {company}의 하드웨어/소프트웨어 통합 인텔리전스 인프라 고도화 국면에서 AI 런타임 무결성 사수가 중요한 보안 과제로 정립되고 있습니다.\n\nNPU의 가동 한계를 연산하고 컴파일러 코드를 실시간 자율 설계 및 조율하는 사내 개발 AI 도구 환경이 간접 인젝션 공격에 피격될 경우, NPU 고유의 컴파일 레이아웃 기밀 데이터가 통제망을 뚫고 누출되는 악성 사고를 초래할 수 있습니다.\n\n국방과 특수 인프라 등 최고의 연산 신뢰성을 만족시키는 팔란티어(Palantir)도 자사의 지능형 코어 무결성을 검증하고 보호하고자 F5 AI Security Platform을 협력 표준 엔진으로 정식 채용했습니다.\n\nF5의 AI Security 기술을 결합하여 {company}의 AI 컴파일 생태계 경계를 완벽히 방어함으로써, 글로벌 고객사들이 한층 안심하고 귀사 제품을 도입할 수 있도록 최고의 신뢰성 무기를 확보하시기 바랍니다. 이와 관련한 심도 있는 기술 대화를 요청드립니다.",
+        "fallback_trigger_title": "AI 반도체 컴파일러 설계 및 미세 아키텍처 연동 AI 대상 역공학 및 소스 코드 탈취 우려",
+        "fallback_trigger_url": "https://antigravity.google/docs/mcp"
+    },
+    {
+        "sector": "자동차 부품제조 (Auto Parts)",
+        "company": "현대모비스",
+        "value_hook": "부품 발주, 스마트 물류, 자율주행 코어 데이터를 자동 처리하는 지능형 모빌리티 에이전트는 프롬프트 조작을 통한 SCM 구매 사기 및 기밀 도면에 대한 원격 강제 탈취에 노출되기 쉽습니다. F5 AISP는 공급망 트랜잭션 무결성을 사수하는 실시간 패킷 기반 AI 방화벽을 적용합니다.",
+        "proof_point": "팔란티어(Palantir)는 SCM 물류 시스템 및 차량용 자율주행 플랫폼의 무결성 저해 위협을 차단하고자 F5 AI Security Platform을 기본 내장하여 안전하게 연동해 오고 있습니다.",
+        "personas": [
+            {"role": "정보보호최고책임자 (CISO)", "name": "{company} 정보보호최고책임자 / 임원진"},
+            {"role": "스마트 물류 및 모빌리티 AI 책임", "name": "{company} R&D 모빌리티/스마트팩토리 리더"}
+        ],
+        "subjects": [
+            "글로벌 SCM 자율 AI 조달 보안 및 도면 설계 데이터 유출 차단 방안",
+            "{company} 미래 모빌리티 SCM 사수: F5 AI Security + Palantir AIP 설계 사례",
+            "공급망 지능화 위협 대응: 공급업체 데이터 주입 우회 해킹 방지 기술"
+        ],
+        "outreach_body": "SDV 및 미래 지능형 부품 리더로 도약하는 {company}의 글로벌 공급망 지능화 및 물류 자동화 AI 에이전트 도입 흐름 속에서, 새로운 형태의 AI 애플리케이션 위협인 런타임 인젝션 공격 제압이 보안실의 중대 화두로 대두되고 있습니다.\n\n만약 자율 부품 발주 및 도면 자동 연동 AI 에이전트가 공급업체의 악의적인 정적 문서 포맷에 노출될 경우, AI 시스템이 왜곡된 발주 수량을 지시하거나 개발 기밀 도면 파일을 외부 이메일로 자동 전송하는 치명적인 SCM 해킹 사고가 일어날 수 있습니다. \n\n글로벌 SCM 분석 및 특수 플랫폼 표준인 팔란티어(Palantir)는 이 같은 AI 런타임 조작 리스크를 사전에 소거하기 위해 F5 AI Security Platform을 자사 AIP 플랫폼 전면에 탑재했습니다.\n\nF5의 AI Security 제품은 {company}이(가) SCM 전반에 적용한 모델들이 정해진 비즈니스 논리 내에서만 작동하도록 실시간 감시망을 보장합니다. 관련 보안 세션 제안을 위해 간략한 대화를 요청합니다.",
+        "fallback_trigger_title": "공급망 관리(SCM) 및 자율주행 데이터 AI 플랫폼 조작을 통한 조달 사고 유출 리스크",
+        "fallback_trigger_url": "https://www.darkreading.com/vulnerabilities-threats/indirect-prompt-injection-copilot-studio-tenant-leak"
+    },
+    {
+        "sector": "자동차 부품제조 (Auto Parts)",
+        "company": "현대위아",
+        "value_hook": "공작기계 가공 정밀도 및 자동화 설비의 동적 예지 보전에 활용되는 AI 에이전트는 프롬프트 주입 공격을 통해 장비의 물리 오작동을 유발하거나 핵심 가공 물리 모델을 외부로 무단 배출시킬 수 있습니다. F5 AISP는 기계 제어 패킷과 LLM 신호 흐름을 엄격하게 단선 감시하는 실시간 가드레일을 적용합니다.",
+        "proof_point": "팔란티어(Palantir)는 산업용 스마트 설비 가동 효율을 극대화하는 분석 시스템 AIP의 데이터 파괴 우회 공격을 인라인에서 영구 차단하기 위해 F5 AI Security Platform을 적극 적용했습니다.",
+        "personas": [
+            {"role": "정보보호 실무최고책임자 (CISO)", "name": "{company} 정보보안 최고담당 임원"},
+            {"role": "공장 자동화 및 스마트 기기 개발본부장", "name": "{company} 공작기계 R&D 및 스마트팩토리 개발 실장"}
+        ],
+        "subjects": [
+            "자동화 공작기계 로봇 AI의 물리 오작동 및 핵심 가공 모델 기술도난 차단 방안",
+            "{company} 스마트 팩토리 제어 안전성 확보: F5 AI Security + Palantir AIP 보안 규격",
+            "기계 설비 예지 보전 AI 보호를 위한 특화형 인라인 실시간 탐지 엔진 세션 제안"
+        ],
+        "outreach_body": "엔지니어링 기술력으로 자동차 부품 및 공작기계 공정 시장을 석권하고 계시는 {company}의 스마트팩토리 자동화 제조 로봇 및 장비 예지 보전 AI 플랫폼 구축과 관련하여, 생성형 AI 시스템 보안 무결성 확보가 당면 과제로 대두되고 있습니다.\n\n원격에서 장비 고장 이력 리포트나 기술 매뉴얼을 실시간 학습하는 공정 분석 AI가 간접 프롬프트 명령 조작 공격에 유입될 경우, 장비 제어 파라미터를 비정상적으로 수정하여 하드웨어 파손을 지시하거나 가공 물리 정보 파일을 전수 유출할 위험이 있습니다.\n\n글로벌 엔터프라이즈 생산성 및 핵심 공급 무결성을 검증하는 팔란티어(Palantir)는 이러한 역공학 침해 위협을 안전하게 회피하고자 F5 AI Security Platform을 도입하여 빈틈없는 방어 체계를 확립했습니다.\n\nF5의 AI Security 기술을 {company} 스마트 공장 제어망에 접목하여 지능형 기계 제어 신호와 LLM 응답을 정교하게 모니터링하는 방안에 대해 당사 글로벌 엔지니어링 표준 성과를 공유해 드리고자 합니다.",
+        "fallback_trigger_title": "공장 자동화 로봇 및 공작기계 자율 제어 AI 비서 대상 역공학 제어 궤적 도난 및 기술 유출 사고 우려",
+        "fallback_trigger_url": "https://www.darkreading.com/vulnerabilities-threats/indirect-prompt-injection-copilot-studio-tenant-leak"
+    },
+    {
+        "sector": "병원 (Hospital)",
+        "company": "삼성서울병원",
+        "value_hook": "환자 전자의무기록(EMR) 및 처방을 지원하는 의료 보조용 생성형 AI는 프롬프트 우회를 통한 의료 정보 대량 유출(HIPAA / 개인정보보호법 위반)의 위험도가 극도로 높습니다. F5 AISP는 의료 데이터 유출 시도 및 이상 프롬프트를 인라인 상에서 물리적 차단하고 안전 규제를 선제 준수합니다.",
+        "proof_point": "팔란티어(Palantir)는 자사 헬스케어 임상 의사결정 플랫폼(AIP)의 강력한 환자 민감 개인정보 보호와 원격 명령어 변조 차단을 검증하기 위해 F5 AI Security Platform을 채택하여 검증을 완수했습니다.",
+        "personas": [
+            {"role": "정보보호최고책임자 (CISO)", "name": "{company} 정보보호실장 / CISO"},
+            {"role": "의료 정보화 및 AI 디지털 리더", "name": "{company} 정보전략실장 / AI 메디컬 담당"}
+        ],
+        "subjects": [
+            "환자 개인정보(PHI) 유출 및 AI 의료 비서 우회 명령어 통제 기술",
+            "{company} 디지털 헬스케어 사수: F5 AI Security + Palantir AIP 적용 가이드",
+            "개인정보보호법 및 의료 규제 완벽 대응을 위한 생성형 AI 실시간 인라인 가드레일"
+        ],
+        "outreach_body": "스마트 병원의 표준을 제시하는 {company}의 원내 AI 의료 지원 및 환자용 스마트 챗봇 플랫폼 고도화 국면에서, 환자 민감 정보 보호를 위한 생성형 AI 전용 런타임 보안 아키텍처 수립이 가장 중요한 선결 과제로 조명받고 있습니다.\n\n회진 보조나 처방 데이터 분석에 투입된 AI 에이전트에 악의적인 프롬프트가 주입될 경우, 비인가 환자의 과거 EMR 정보가 화면에 대량 누설되거나 외부에 전송되는 치명적인 개인정보보호법 위반 사고로 이어지기 쉽습니다. 이는 기존의 네트워크 방화벽이 감지할 수 없는 '의도 분석'의 영역입니다.\n\n미국 글로벌 병원 분석 솔루션을 전담하는 팔란티어(Palantir)는 이러한 리스크를 F5 AI Security Platform과의 네이티브 연동을 통해 선제적으로 극복하여 높은 규제 기준을 만족시켰습니다.\n\nF5의 AI Security 기술은 병원 내부 AI 시스템의 런타임 무결성을 완전히 보장하여, 원내 의사결정 보조 시스템의 신뢰도를 한 차원 끌어올릴 수 있습니다. 관련하여 상세한 정보를 공유해 드리고자 합니다.",
+        "fallback_trigger_title": "환자 의료 정보(PHI) 수집 진료 지원 AI 챗봇 대상 프롬프트 주입 및 의료 데이터 대량 탈취",
+        "fallback_trigger_url": "https://www.csoonline.com/article/4207306/one-click-flaw-in-atlassian-rovo-exposed-enterprise-data-via-prompt-injection-attack.html"
+    },
+    {
+        "sector": "병원 (Hospital)",
+        "company": "서울아산병원",
+        "value_hook": "의사의 구두 처방을 기록하고 정리하는 음성 변환(Speech-to-Text) 생성형 AI는 오디오 스크립트 가공 중 특수 명령어 공격에 감염될 위험이 큽니다. F5 AISP는 원내 생성형 텍스트 흐름에 인라인 차단막을 형성하여 의료 정보 보호법을 무결하게 충족합니다.",
+        "proof_point": "팔란티어(Palantir)는 환자 진료 기록 분석 AIP 전반의 민감 개인 정보 외부 누출 시도를 제어하고 안전 규제를 충족하기 위해 F5 AI Security Platform의 런타임 보안 장치를 활용 중입니다.",
+        "personas": [
+            {"role": "정보보호 최고책임자 (CISO)", "name": "{company} 정보보호최고책임자 / 실장"},
+            {"role": "의료 정보화 총괄 실장", "name": "{company} 정보전략 및 디지털전환 부장"}
+        ],
+        "subjects": [
+            "의료 음성 녹취 스크립트 탈취 불가 구조 수립: 진료 보조 AI 런타임 통제 방안",
+            "{company} 의료 IT 정보 신뢰성 강화: F5 AI Security + Palantir AIP 보안 표준",
+            "원내 환자 진료 보조용 생성형 모델의 보안 무결성을 확보하는 인라인 방화벽 실증 검토 제안"
+        ],
+        "outreach_body": "세계적인 헬스케어 인프라를 지탱하는 {company}의 음성 인식(STT) 결합 임상 진료 보조용 AI 및 전자의무기록(EMR) 분석 엔진 운용 흐름 속에서, 생성형 AI의 비정상 명령어 실행을 통한 정보 탈취 해킹 예방이 보안본부의 가장 뜨거운 현안으로 주목받고 있습니다.\n\n환자와의 진료 구두 음성을 텍스트로 가공해 학습 모델에 주입하는 과정에서 악의적인 문장 파라미터가 섞여 들어가면, AI가 환자의 처방 기밀이나 과거 진료 정보를 대량 유출하여 공공의 치명적인 개인정보 신용 실추로 직결되는 중대 위법 리스크에 당면할 수 있습니다.\n\n미국의 수많은 헬스케어 대기업 분석망을 보호하는 팔란티어(Palantir)는 이 같은 AI 조작 리스크를 소멸시키기 위해 F5 AI Security Platform의 실시간 런타임 제어 체계를 긴밀하게 가동하고 있습니다.\n\nF5의 AI Security 기술을 병원 핵심 EMR 정보망에 연동하여 비정상 프롬프트를 차단하고 안전 규격을 충족하는 가이드라인을 세션 미팅을 통해 공유해 드리고자 합니다.",
+        "fallback_trigger_title": "외래 임상 진크 및 전자의무기록(EMR) 음성 변환 AI 비서 대상 프롬프트 인젝션 및 불법 녹취 데이터 외부 유설 위협",
+        "fallback_trigger_url": "https://www.csoonline.com/article/4207306/one-click-flaw-in-atlassian-rovo-exposed-enterprise-data-via-prompt-injection-attack.html"
+    }
+]
+
+# Sector configurations mapping a list of companies to the sector
+sector_companies = {
+    "2차전지 (Secondary Battery)": ["LG에너지솔루션", "에코프로", "삼성SDI", "SK온", "포스코퓨처엠", "엘앤에프", "엔켐", "천보", "코스모신소재", "솔루스첨단소재"],
+    "제약 및 바이오 헬스케어 (Pharma & Bio)": ["삼성바이오로직스", "셀트리온", "SK바이오사이언스", "유한양행", "한미약품", "대웅제약", "GC녹십자", "종근당", "동아에스티", "에스티팜"],
+    "게임 (Gaming)": ["크래프톤", "넷마블", "넥슨", "엔씨소프트", "카카오게임즈", "펄어비스", "스마일게이트", "위메이드", "컴투스", "시프트업"],
+    "AI 스타트업 (AI Startup)": ["업스테이지", "리벨리온", "퓨리오사AI", "뤼튼테크놀로지스", "몰로코", "코난테크놀로지", "솔트룩스", "마음AI", "스캐터랩", "트웰브랩스"],
+    "자동차 부품제조 (Auto Parts)": ["현대모비스", "현대위아", "HL만도", "한온시스템", "에스엘", "서연이화", "성우하이텍", "화신", "평화정공", "경창산업"],
+    "병원 (Hospital)": ["삼성서울병원", "서울아산병원", "서울대학교병원", "연세대학교 세브란스병원", "가톨릭대학교 서울성모병원", "분당서울대학교병원", "아주대학교병원", "고려대학교 안암병원", "국립암센터", "가천대 길병원"]
+}
+
+expanded_targets = []
+
+for sector, companies in sector_companies.items():
+    # Find templates for this sector
+    templates = [t for t in base_targets if t["sector"] == sector]
+    
+    for idx, company in enumerate(companies):
+        # Alternate between template A (even index) and template B (odd index)
+        template = templates[idx % 2]
+        
+        # Create a new dictionary
+        new_target = {
+            "sector": f"{sector} - Group {idx+1}",
+            "company": company,
+            "value_hook": template["value_hook"],
+            "proof_point": template["proof_point"],
+            "personas": [
+                {
+                    "role": p["role"],
+                    "name": p["name"].replace("{company}", company),
+                    "url": f"https://www.google.com/search?q=site:linkedin.com/in/+{company}+" + p["role"].split()[0]
+                }
+                for p in template["personas"]
+            ],
+            "subjects": [s.replace("{company}", company) for s in template["subjects"]],
+            "outreach_body": template["outreach_body"].replace("{company}", company),
+            "fallback_trigger_title": template["fallback_trigger_title"],
+            "fallback_trigger_url": template["fallback_trigger_url"]
+        }
+        
+        expanded_targets.append(new_target)
+
+# Write to JSON file
+with open("targets.json", "w", encoding="utf-8") as f:
+    json.dump(expanded_targets, f, ensure_ascii=False, indent=4)
+
+print(f"Generated {len(expanded_targets)} targets.")
