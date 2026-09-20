@@ -37,6 +37,24 @@ def handle_app_mention_events(body, say):
 def message_hello(message, say):
     say("네! 타깃 분석을 원하시면 저를 멘션(@CrawlerBot)하고 명령해주세요!")
 
+
+@app.event("message")
+def handle_message_events(body, say):
+    event = body.get("event", {})
+    text = event.get("text", "")
+    user = event.get("user")
+    channel_type = event.get("channel_type")
+    
+    # DM(Direct Message) 채널에서 멘션 없이 그냥 말 걸었을 때도 응답하도록 예외 처리
+    if channel_type == "im" and "타깃분석" in text:
+        say(f"<@{user}>님, DM 명령을 수신했습니다. 타깃을 심층 분석하여 즉시 리포트를 생성하겠습니다! ⏳ (약 10초 소요)")
+        try:
+            import crawler_slack
+            report = crawler_slack.generate_korean_outreach_report()
+            say(report)
+        except Exception as e:
+            say(f"❌ 분석 중 오류가 발생했습니다: {str(e)}")
+
 if __name__ == "__main__":
     print("🚀 [Slack Bot] 양방향 Socket Mode 리스너 구동 시작...")
     handler = SocketModeHandler(app, SLACK_APP_TOKEN)
