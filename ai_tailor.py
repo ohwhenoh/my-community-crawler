@@ -25,7 +25,7 @@ def generate_personalized_hook(target_name, scraped_content):
             from openai import OpenAI
             client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key)
             response = client.chat.completions.create(
-                model="meta/llama-3.1-8b-instruct",
+                model="meta/llama-3.2-11b-vision-instruct",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=200
             )
