@@ -18,9 +18,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy and install python dependencies
 COPY requirements.txt .
-RUN playwright install --with-deps chromium
 
 RUN pip install --no-cache-dir -r requirements.txt
+RUN playwright install --with-deps chromium
+
 
 # Copy application source files
 COPY app.py .
