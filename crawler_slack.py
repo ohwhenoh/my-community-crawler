@@ -1,3 +1,6 @@
+import database
+from ai_tailor import generate_personalized_hook
+import scraper_engine
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 import yfinance as yf
