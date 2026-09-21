@@ -431,6 +431,7 @@ def generate_korean_outreach_report():
     
     # --- DB에 이력 저장 (기억력 장착) ---
     print(f"[Vector DB] {target['company']} 타깃 이력 저장 중...")
+    database.init_db()
     database.save_history(target['company'], trend_reason, trigger_summary, personalized_hook)
 
     macro_text = (
