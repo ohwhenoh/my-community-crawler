@@ -523,8 +523,8 @@ def generate_korean_outreach_report():
     bond_yields = {'미국 10년': '^TNX', '일본 10년': '^JN09T', '영국 10년': '^IRX', '캐나다 10년': '^TNX', '벨기에 10년': '^TNX'} # yfinance limitations on intl bonds, using approximations or placeholders for API stability if actuals fail.
     
     # Actually, fetching bond prices via ETF was done in the past, let's restore the exact ETFs from the user's history
-    bonds = {'미국 10년': 'IEF', '일본 10년': '2515.T', '영국 10년': 'IGLT.L', '캐나다 10년': 'XGB.TO', '벨기에 10년': 'BGB.MI'}
-    bond_text = "📉 *[주요국 10년물 국채 금리 방향 (ETF 가격 기반)]*\n"
+    bonds = {'미국 10년': 'IEF', '일본 10년': '2515.T', '영국 10년': 'IGLT.L', '중국 10년': 'CBON', '벨기에 10년': 'XG7S.MI', '캐나다 10년': 'XGB.TO'}
+    bond_text = "📉 *[주요국 10년물 국채 가격 동향 (ETF 기반)]*\n"
     
     try:
         for country, ticker in bonds.items():
@@ -536,9 +536,9 @@ def generate_korean_outreach_report():
             try: m1_price = hist.loc[hist.index >= (hist.index[-1] - timedelta(days=30))]['Close'].iloc[0]
             except: m1_price = curr_price
             
-            # 국채 가격 상승 = 금리 하락
-            direction = "하락 📉" if curr_price > m1_price else "상승 📈"
-            bond_text += f"  • {country} 국채 금리 {direction} (1개월 전 가격: {m1_price:,.2f} ➡️ 현재: {curr_price:,.2f})\n"
+            # 국채 가격 자체의 방향 표기
+            direction = "상승 📈" if curr_price > m1_price else "하락 📉"
+            bond_text += f"  • {country} 국채 가격 {direction} (1개월 전: {m1_price:,.2f} ➡️ 현재: {curr_price:,.2f})\n"
     except Exception as e:
         bond_text = "  • (국채 데이터 실시간 조회 지연)\n"
 
