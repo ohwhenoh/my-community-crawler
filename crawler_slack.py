@@ -472,6 +472,40 @@ def get_fx_analysis():
     output += "[직관적 판단 기준]\n🔥 +0.5% 이상 → 엑셀 밟으세요! (적극 환전/투자)\n⏸️ -0.3 ~ +0.5% → 기어 중립! (잠시 대기)\n🛑 -0.3% 미만 → 브레이크! (진입 절대 금지)\n\n"
     return output
 
+
+class MicroSignalHunter:
+    def __init__(self):
+        self.headers = {'User-Agent': 'Mozilla/5.0'}
+
+    def get_signals(self, company_name):
+        import urllib.request
+        import urllib.parse
+        import xml.etree.ElementTree as ET
+        
+        query = f"{company_name} (채용 OR 보안 OR 해킹 OR 유출 OR 클라우드 OR 디도스)"
+        encoded_query = urllib.parse.quote(query)
+        rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=ko&gl=KR&ceid=KR:ko"
+        
+        signals = []
+        try:
+            req = urllib.request.Request(rss_url, headers=self.headers)
+            res = urllib.request.urlopen(req, timeout=5)
+            root = ET.fromstring(res.read())
+            
+            for item in root.findall('.//item')[:3]:
+                title = item.find('title').text
+                pubDate = item.find('pubDate').text
+                
+                # Check if it's very recent (e.g. 2026) to avoid very old news in our mock, but just return the titles
+                if company_name in title or "보안" in title or "채용" in title or "클라우드" in title:
+                    signals.append(f"  🚨 *[시그널]* {title}")
+        except Exception as e:
+            return [f"  ⚠️ 마이크로 시그널 탐지 실패: {str(e)}"]
+            
+        if not signals:
+            return ["  💤 최근 1주 내 특이 시그널(채용/보안) 없음."]
+        return signals
+
 def generate_korean_outreach_report():
     import json
     with open('targets.json', 'r', encoding='utf-8') as f:
@@ -491,6 +525,12 @@ def generate_korean_outreach_report():
     scraper = DeepScraper()
     deep_scraped_data = scraper.extract_optimized_info(discovered_links)
     
+
+    # 4. MICRO SIGNAL PHASE (Target specific)
+    signal_hunter = MicroSignalHunter()
+    micro_signals = signal_hunter.get_signals(target['company'])
+    signals_text = "\n".join(micro_signals)
+
     # 3. OPTIMIZER PHASE
     if deep_scraped_data:
         # Pick the most robustly scraped article
