@@ -392,6 +392,71 @@ def get_macro_economic_data():
         print(f"거시경제 데이터 수집 실패: {e}")
         return "⚠️ 거시경제 지표 실시간 수집 지연\n\n"
 
+
+def get_fx_analysis():
+    import yfinance as yf
+    
+    rates = {'US': 5.00, 'CN': 3.45, 'KR': 3.50, 'JP': 0.10, 'MY': 3.00, 'EU': 4.50}
+    pairs = {
+        '🇨🇳 중국 위안화': ('CN', 'USDCNY=X'),
+        '🇰🇷 한국 원화': ('KR', 'USDKRW=X'),
+        '🇯🇵 일본 엔화': ('JP', 'USDJPY=X'),
+        '🇲🇾 말레이시아 링깃': ('MY', 'USDMYR=X'),
+        '🇪🇺 유럽 유로': ('EU', 'USDEUR=X')
+    }
+
+    output = "🔄 *[실시간 환율 및 글로벌 금리차 분석 (B2B 투자 매력도)]*\n"
+    
+    for name, (code, ticker) in pairs.items():
+        try:
+            data = yf.download(ticker, period='3mo', progress=False)
+            if data.empty: continue
+                
+            current_fx = float(data['Close'].iloc[-1].item())
+            base_fx = float(data['Close'].iloc[0].item())
+            target_rate = rates[code]
+            us_rate = rates['US']
+            
+            fx_change_pct = (current_fx / base_fx - 1) * 100
+            fx_gain = -fx_change_pct
+            
+            # [1] 미-타겟 금리차
+            rate_spread = us_rate - target_rate
+            if rate_spread >= 3.0:
+                spread_status = f"환율 의존 ({rate_spread:.2f}%p ⚠️)"
+            elif rate_spread <= 2.0:
+                spread_status = f"본격 유리 ({rate_spread:.2f}%p ✅)"
+            else:
+                spread_status = f"중립 구간 ({rate_spread:.2f}%p ⚠️)"
+                
+            # [2] 환율 추이 (최근 3개월)
+            if fx_change_pct <= -3.0:
+                fx_status = f"환차익 큼 ({fx_gain:+.2f}% 강세 ✅)"
+            elif -1.0 <= fx_change_pct <= 1.0:
+                fx_status = f"횡보, 수수료만 날림 ({fx_gain:+.2f}% ⚠️)"
+            elif fx_change_pct >= 2.0:
+                fx_status = f"손실 위험 ({fx_gain:+.2f}% 약세 ❌)"
+            else:
+                if fx_change_pct < -1.0:
+                    fx_status = f"강세 ({fx_gain:+.2f}% ✅)"
+                else:
+                    fx_status = f"약세 ({fx_gain:+.2f}% ❌)"
+                    
+            # [3] 최종 판단 = 타겟금리 + 환차익 - 미국금리
+            final_score = target_rate + fx_gain - us_rate
+            if final_score >= 0.5:
+                final_status = f"매수/보유 ✅ ({final_score:+.2f}%)"
+            elif -0.5 < final_score < 0.5:
+                final_status = f"관망 ⚠️ ({final_score:+.2f}%)"
+            else:
+                final_status = f"매도/기피 ❌ ({final_score:+.2f}%)"
+                
+            output += f"• *{name}* (현재 {current_fx:.2f}):\n  ↳ [1.금리차] {spread_status} | [2.환율추이] {fx_status} | [3.최종] {final_status}\n"
+        except:
+            continue
+            
+    return output + "\n"
+
 def generate_korean_outreach_report():
     import json
     with open('targets.json', 'r', encoding='utf-8') as f:
@@ -434,11 +499,15 @@ def generate_korean_outreach_report():
     database.init_db()
     database.save_history(target['company'], trend_reason, trigger_summary, personalized_hook)
 
+    # 추가된 환율 분석 로직
+    fx_analysis = get_fx_analysis()
+
     macro_text = (
         "📈 *[Global Macro & Market Signals]*\n"
         "• 🟢 *Fed 금리 동향*: 동결 기조 유지 (기술주 투자 심리 안정)\n"
         "• 🟡 *유로존 금리 변동*: 🇪🇺 *'독일 제조업 PMI 부진 및 유럽중앙은행(ECB) 추가 금리 인하 지연 우려'* - 유럽 1위 공업국인 독일의 침체 여파로 글로벌 IT 벤더들의 매출 타격이 예상됨 (실제로 주요 고객사들의 인프라 투자 결정을 1~2분기 미루고 있는 상황). 이럴 때일수록 '예산 감축'을 방어하는 논리보다, 분산된 보안 장비(WAF, Bot, API)를 F5 단일 플랫폼으로 통합하여 **'TCO(총소유비용)를 30% 즉각 절감'** 할 수 있다는 명확한 수치적 가치를 제시해야 함.\n"
         "• 🔴 *환율 리스크*: 강달러 지속 (외산 솔루션 도입 부담 증가 ➡️ ROI/비용절감 가치 강조 필수)\n\n"
+        f"{fx_analysis}"
     )
 
     
