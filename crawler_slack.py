@@ -394,8 +394,13 @@ def get_macro_economic_data():
 
 
 
+
 def get_fx_analysis():
     import yfinance as yf
+    import requests
+    session = requests.Session()
+    session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'})
+
     from datetime import datetime
     
     rates = {'US': 4.98, 'CN': 3.45, 'KR': 3.50, 'JP': 0.10, 'MY': 3.00, 'EU': 4.50}
@@ -413,7 +418,7 @@ def get_fx_analysis():
     
     for name, (code, ticker) in pairs.items():
         try:
-            data = yf.download(ticker, period='3mo', progress=False)
+            data = yf.download(ticker, period='3mo', progress=False, session=session)
             if data.empty: continue
                 
             current_fx = float(data['Close'].iloc[-1].item())

@@ -16,7 +16,12 @@ def load_env():
                     k, v = line.split("=", 1)
                     os.environ[k.strip()] = v.strip().strip("'").strip('"')
 
+
 def get_macro_email_content():
+    import requests
+    session = requests.Session()
+    session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'})
+
     # 1. FX Analysis
     fx_analysis = crawler_slack.get_fx_analysis()
     
@@ -26,7 +31,7 @@ def get_macro_email_content():
     
     try:
         for country, ticker in bonds.items():
-            t = yf.Ticker(ticker)
+            t = yf.Ticker(ticker, session=session)
             hist = t.history(period="1y")
             if len(hist) < 5: continue
                 
