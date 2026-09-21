@@ -554,48 +554,7 @@ def generate_korean_outreach_report(return_target=False):
     database.init_db()
     database.save_history(target['company'], trend_reason, trigger_summary, personalized_hook)
 
-    # 추가된 환율 분석 로직
-    fx_analysis = get_fx_analysis()
-
-    import yfinance as yf
-    from datetime import timedelta
-    import requests
-    
-    # 10년물 국채 수익률 (Yield) 조회 로직 추가
-    bond_yields = {'미국 10년': '^TNX', '일본 10년': '^JN09T', '영국 10년': '^IRX', '캐나다 10년': '^TNX', '벨기에 10년': '^TNX'} # yfinance limitations on intl bonds, using approximations or placeholders for API stability if actuals fail.
-    
-    # Actually, fetching bond prices via ETF was done in the past, let's restore the exact ETFs from the user's history
-    bonds = {'미국 10년': 'IEF', '일본 10년': '2515.T', '영국 10년': 'IGLT.L', '중국 10년': 'CBON', '벨기에 10년': 'XG7S.MI', '캐나다 10년': 'XGB.TO'}
-    bond_text = "📉 *[주요국 10년물 국채 가격 동향 (ETF 기반)]*\n"
-    
-    try:
-        for country, ticker in bonds.items():
-            t = yf.Ticker(ticker)
-            hist = t.history(period="1y")
-            if len(hist) < 5: continue
-                
-            curr_price = hist['Close'].iloc[-1]
-            try: m1_price = hist.loc[hist.index >= (hist.index[-1] - timedelta(days=30))]['Close'].iloc[0]
-            except: m1_price = curr_price
-            
-            # 국채 가격 자체의 방향 표기 및 세일즈 시사점
-            if curr_price > m1_price:
-                direction = "상승 📈 ➡️ [기업 대출 이자 부담 완화 🟢 / 신규 솔루션 투자 재개 기대]"
-            else:
-                direction = "하락 📉 ➡️ [기업 대출 이자 부담 증가 🔴 / 신규 솔루션 투자 감소 우려]"
-            bond_text += f"  • {country} 국채 가격 {direction} (1개월 전: {m1_price:,.2f} ➡️ 현재: {curr_price:,.2f})\n"
-    except Exception as e:
-        bond_text = "  • (국채 데이터 실시간 조회 지연)\n"
-
-    macro_text = (
-        "📈 *[Global Macro & Market Signals]*\n"
-        "• 🟢 *Fed 금리 동향*: 동결 기조 유지 (기술주 투자 심리 안정)\n"
-        f"{bond_text}\n"
-        "• 🟡 *유로존 금리 변동*: 🇪🇺 *'독일 제조업 PMI 부진 및 유럽중앙은행(ECB) 추가 금리 인하 지연 우려'* - 유럽 1위 공업국인 독일의 침체 여파로 글로벌 IT 벤더들의 매출 타격이 예상됨 (실제로 주요 고객사들의 인프라 투자 결정을 1~2분기 미루고 있는 상황). 이럴 때일수록 '예산 감축'을 방어하는 논리보다, 분산된 보안 장비(WAF, Bot, API)를 F5 단일 플랫폼으로 통합하여 **'TCO(총소유비용)를 30% 즉각 절감'** 할 수 있다는 명확한 수치적 가치를 제시해야 함.\n"
-        "• 🔴 *환율 리스크*: 강달러 지속 (외산 솔루션 도입 부담 증가 ➡️ ROI/비용절감 가치 강조 필수)\n\n"
-        f"{fx_analysis}"
-    )
-
+    macro_text = get_macro_economic_data()
     
     report_text = (
         f"🎯 *[일일 대한민국 세일즈 인텔리전스 리포트 - F5 AI Security]*\n"
