@@ -27,6 +27,8 @@ RUN playwright install --with-deps chromium
 COPY app.py .
 COPY crawler_slack.py .
 COPY scheduler_daemon.py .
+COPY email_reporter.py .
+
 COPY bot_daemon.py .
 COPY ai_tailor.py .
 COPY api_health_check.py .
