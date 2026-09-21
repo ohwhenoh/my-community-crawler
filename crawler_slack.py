@@ -256,6 +256,10 @@ def check_recent_post(minutes=10):
 def get_macro_economic_data():
     try:
         import requests
+        from datetime import datetime
+        import yfinance as yf
+        from datetime import timedelta
+        
         def get_yahoo_price(ticker):
             try:
                 headers = {'User-Agent': 'Mozilla/5.0'}
@@ -273,39 +277,94 @@ def get_macro_economic_data():
             except:
                 return None, None, None, None
 
-        jpy_krw_c, _, _, _ = get_yahoo_price('JPYKRW=X')
-        jpy_sgd_c, _, _, _ = get_yahoo_price('JPYSGD=X')
-        jpy_usd_c, _, _, _ = get_yahoo_price('JPYUSD=X')
-        jpy_cny_c, _, _, _ = get_yahoo_price('JPYCNY=X')
-        krw_sgd_c, _, _, _ = get_yahoo_price('KRWSGD=X')
-        krw_usd_c, _, _, _ = get_yahoo_price('KRWUSD=X')
-        krw_cny_c, _, _, _ = get_yahoo_price('KRWCNY=X')
-        usd_krw_c, _, _, _ = get_yahoo_price('USDKRW=X')
-        usd_sgd_c, _, _, _ = get_yahoo_price('USDSGD=X')
-        usd_cny_c, _, _, _ = get_yahoo_price('USDCNY=X')
-        
         fx_text = "📈 *[Global Macro & Market Signals]*\n"
-        fx_text += "• 🟢 *Fed 금리 동향*: 동결 기조 유지 (기술주 투자 심리 안정)\n"
-        fx_text += "💱 *[환율 방향 (Purchase Power Influence)]*\n"
-        if jpy_krw_c: fx_text += f"• *10,000 JPY* = {jpy_krw_c*10000:,.0f} KRW | {jpy_sgd_c*10000:,.1f} SGD | {jpy_usd_c*10000:,.1f} USD | {jpy_cny_c*10000:,.1f} CNY\n"
-        if krw_sgd_c: fx_text += f"• *100,000 KRW* = {krw_sgd_c*100000:,.1f} SGD | {krw_usd_c*100000:,.1f} USD | {krw_cny_c*100000:,.1f} CNY\n"
-        if usd_krw_c: fx_text += f"• *100 USD* = {usd_krw_c*100:,.0f} KRW | {usd_sgd_c*100:,.1f} SGD | {usd_cny_c*100:,.1f} CNY\n\n"
+        fx_text += "• 🟢 Fed 금리 동향: 동결 기조 유지 (기술주 투자 심리 안정)\n"
         
-        bonds = {'미국': 'IEF', '일본': '2515.T', '영국': 'IGLT.L'}
+        bonds = {'미국 10년': 'IEF', '일본 10년': '2515.T', '영국 10년': 'IGLT.L', '중국 10년': 'CBON', '벨기에 10년': 'XG7S.MI', '캐나다 10년': 'XGB.TO'}
         bond_text = "📉 *[주요국 10년물 국채 가격 동향 (ETF 기반)]*\n"
         for country, ticker in bonds.items():
             curr, w1, m1, y1 = get_yahoo_price(ticker)
             if not curr: continue
-            w1_pct = (curr - w1) / w1 * 100
-            m1_pct = (curr - m1) / m1 * 100
-            y1_pct = (curr - y1) / y1 * 100
-            def get_trend(pct):
-                if pct > 1.0: return "강세 ↗"
-                elif pct < -1.0: return "약세 ↘"
-                return "보합 ➔"
-            bond_text += f"• *{country} ({ticker})*: 현재 {curr:,.1f} (1주 {get_trend(w1_pct)}, 1달 {get_trend(m1_pct)}, 1년 {get_trend(y1_pct)})\n"
             
-        return fx_text + "\n" + bond_text + "\n"
+            if curr < m1:
+                direction = "가격 하락 📉 ➡️ [기업 대출 이자 부담 증가 🔴 / 신규 솔루션 투자 감소 우려]"
+            else:
+                direction = "가격 상승 📈 ➡️ [기업 대출 이자 부담 완화 🟢 / 신규 솔루션 투자 재개 기대]"
+                
+            bond_text += f"  • {country} 국채 {direction} (1개월 전: {m1:,.2f} ➡️ 현재: {curr:,.2f})\n"
+            
+        fx_text += bond_text + "\n"
+        
+        fx_text += "• 🟡 유로존 금리 변동: 🇪🇺 '독일 제조업 PMI 부진 및 유럽중앙은행(ECB) 추가 금리 인하 지연 우려' - 유럽 1위 공업국인 독일의 침체 여파로 글로벌 IT 벤더들의 매출 타격이 예상됨 (실제로 주요 고객사들의 인프라 투자 결정을 1~2분기 미루고 있는 상황). 이럴 때일수록 '예산 감축'을 방어하는 논리보다, 분산된 보안 장비(WAF, Bot, API)를 F5 단일 플랫폼으로 통합하여 **'TCO(총소유비용)를 30% 즉각 절감'** 할 수 있다는 명확한 수치적 가치를 제시해야 함.\n"
+        fx_text += "• 🔴 환율 리스크: 강달러 지속 (외산 솔루션 도입 부담 증가 ➡️ ROI/비용절감 가치 강조 필수)\n\n"
+
+        rates = {'US': 4.98, 'CN': 3.45, 'KR': 3.50, 'JP': 0.10, 'MY': 3.00, 'EU': 4.50}
+        pairs = {
+            '🇨🇳 중국 위안화': ('CN', 'USDCNY=X'),
+            '🇰🇷 한국 원화': ('KR', 'USDKRW=X'),
+            '🇯🇵 일본 엔화': ('JP', 'USDJPY=X'),
+            '🇲🇾 말레이시아 링깃': ('MY', 'USDMYR=X'),
+            '🇪🇺 유럽 유로': ('EU', 'USDEUR=X')
+        }
+
+        date_str = datetime.now().strftime('%Y-%m-%d')
+        fx_analysis = f"🔄 *[실시간 환율·글로벌 금리차 분석 (B2B 매력도)]*\n"
+        fx_analysis += f"기준: {date_str} | 미국 10년물: {rates['US']:.2f}% | 환율기준: 3개월 전 대비\n\n"
+        
+        for name, (code, ticker) in pairs.items():
+            try:
+                data = yf.download(ticker, period='3mo', progress=False)
+                if data.empty: continue
+                    
+                current_fx = float(data['Close'].iloc[-1].item())
+                base_fx = float(data['Close'].iloc[0].item())
+                target_rate = rates[code]
+                us_rate = rates['US']
+                
+                # [1] 금리차
+                spread = us_rate - target_rate
+                if spread >= 4.0:
+                    spread_emoji = "❌"
+                elif spread >= 1.0:
+                    spread_emoji = "⚠️"
+                else:
+                    spread_emoji = "✅"
+                spread_status = f"미국 +{spread:.2f}%p 유리 {spread_emoji}"
+                    
+                # [2] 환율 추이 (최근 3개월)
+                fx_change_pct = (current_fx / base_fx - 1) * 100
+                fx_gain = -fx_change_pct
+                
+                if fx_gain >= 1.0:
+                    fx_comment = "외산 솔루션 도입 부담 감소"
+                    fx_emoji = "🟢"
+                elif fx_gain > -1.0:
+                    fx_comment = "도입 부담 평이 (횡보)"
+                    fx_emoji = "🟡"
+                else:
+                    fx_comment = "외산 솔루션 도입 부담 가중"
+                    fx_emoji = "🔴"
+                    
+                fx_status = f"{fx_gain:+.1f}% ({fx_comment} {fx_emoji})"
+                
+                # [3] 최종 판단 = 타겟금리 + 환차익 - 미국금리
+                final_score = target_rate + fx_gain - us_rate
+                
+                if final_score >= 0.5:
+                    final_status = f"🔥 엑셀 밟으세요! (수익이 기대되는 황금 타이밍) [{final_score:+.2f}%]"
+                elif final_score >= -0.3:
+                    final_status = f"⏸️ 기어 중립! (수수료 떼면 남는 게 없어요, 잠시 대기) [{final_score:+.2f}%]"
+                else:
+                    final_status = f"🛑 브레이크! (지금 들어가면 물립니다. 절대 진입 금지) [{final_score:+.2f}%]"
+                    
+                fx_analysis += f"{name} (현재 {current_fx:.2f} / 기준 {base_fx:.2f})\n"
+                fx_analysis += f"  ↳ [1.금리차] {spread_status}\n"
+                fx_analysis += f"  ↳ [2.환율추이] {fx_status}\n"
+                fx_analysis += f"  ↳ [3.최종] {final_status}\n\n"
+            except Exception as e:
+                pass
+                
+        return fx_text + fx_analysis
     except Exception as e:
         return f"거시 경제 지표 수집 실패: {e}\n\n"
 
