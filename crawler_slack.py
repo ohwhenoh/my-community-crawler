@@ -393,10 +393,12 @@ def get_macro_economic_data():
         return "⚠️ 거시경제 지표 실시간 수집 지연\n\n"
 
 
+
 def get_fx_analysis():
     import yfinance as yf
+    from datetime import datetime
     
-    rates = {'US': 5.00, 'CN': 3.45, 'KR': 3.50, 'JP': 0.10, 'MY': 3.00, 'EU': 4.50}
+    rates = {'US': 4.98, 'CN': 3.45, 'KR': 3.50, 'JP': 0.10, 'MY': 3.00, 'EU': 4.50}
     pairs = {
         '🇨🇳 중국 위안화': ('CN', 'USDCNY=X'),
         '🇰🇷 한국 원화': ('KR', 'USDKRW=X'),
@@ -405,7 +407,9 @@ def get_fx_analysis():
         '🇪🇺 유럽 유로': ('EU', 'USDEUR=X')
     }
 
-    output = "🔄 *[실시간 환율 및 글로벌 금리차 분석 (B2B 투자 매력도)]*\n"
+    date_str = datetime.now().strftime('%Y-%m-%d')
+    output = f"🔄 *[실시간 환율·글로벌 금리차 분석 (B2B 매력도)]*\n"
+    output += f"기준: {date_str} | 미국 10년물: {rates['US']:.2f}% | 환율기준: 3개월 전 대비\n\n"
     
     for name, (code, ticker) in pairs.items():
         try:
@@ -417,45 +421,62 @@ def get_fx_analysis():
             target_rate = rates[code]
             us_rate = rates['US']
             
+            # [1] 금리차
+            spread = us_rate - target_rate
+            if spread >= 4.0:
+                spread_emoji = "❌"
+            elif spread >= 1.0:
+                spread_emoji = "⚠️"
+            else:
+                spread_emoji = "✅"
+            spread_status = f"미국 +{spread:.2f}%p 유리 {spread_emoji}"
+                
+            # [2] 환율 추이 (최근 3개월)
             fx_change_pct = (current_fx / base_fx - 1) * 100
             fx_gain = -fx_change_pct
             
-            # [1] 미-타겟 금리차
-            rate_spread = us_rate - target_rate
-            if rate_spread >= 3.0:
-                spread_status = f"환율 의존 ({rate_spread:.2f}%p ⚠️)"
-            elif rate_spread <= 2.0:
-                spread_status = f"본격 유리 ({rate_spread:.2f}%p ✅)"
+            if fx_gain >= 3.0:
+                fx_comment = "강세 지속"
+                fx_emoji = "✅"
+            elif fx_gain >= 1.0:
+                fx_comment = "약한 강세"
+                fx_emoji = "⚠️"
+            elif fx_gain > -1.0:
+                fx_comment = "횡보"
+                fx_emoji = "⚠️"
             else:
-                spread_status = f"중립 구간 ({rate_spread:.2f}%p ⚠️)"
+                fx_comment = "원화 약세 → 환차손" if code == 'KR' else "약세 지속"
+                fx_emoji = "❌"
                 
-            # [2] 환율 추이 (최근 3개월)
-            if fx_change_pct <= -3.0:
-                fx_status = f"환차익 큼 ({fx_gain:+.2f}% 강세 ✅)"
-            elif -1.0 <= fx_change_pct <= 1.0:
-                fx_status = f"횡보, 수수료만 날림 ({fx_gain:+.2f}% ⚠️)"
-            elif fx_change_pct >= 2.0:
-                fx_status = f"손실 위험 ({fx_gain:+.2f}% 약세 ❌)"
-            else:
-                if fx_change_pct < -1.0:
-                    fx_status = f"강세 ({fx_gain:+.2f}% ✅)"
-                else:
-                    fx_status = f"약세 ({fx_gain:+.2f}% ❌)"
-                    
-            # [3] 최종 판단 = 타겟금리 + 환차익 - 미국금리
+            fx_status = f"{fx_gain:+.1f}% ({fx_comment}) {fx_emoji}"
+            
+            # [3] 최종 판단
             final_score = target_rate + fx_gain - us_rate
+            final_comment = ""
+            
             if final_score >= 0.5:
-                final_status = f"매수/보유 ✅ ({final_score:+.2f}%)"
-            elif -0.5 < final_score < 0.5:
-                final_status = f"관망 ⚠️ ({final_score:+.2f}%)"
+                final_text = "매수/보유"
+                final_emoji = "✅"
+            elif final_score >= -0.3:
+                final_text = "관망"
+                final_emoji = "⚠️"
+                if -0.2 <= final_score <= 0.2:
+                    final_comment = " → 수수료 고려 시 본전 수준"
             else:
-                final_status = f"매도/기피 ❌ ({final_score:+.2f}%)"
+                final_text = "재검토 필요" if code == 'KR' else "매도/기피"
+                final_emoji = "❌"
                 
-            output += f"• *{name}* (현재 {current_fx:.2f}):\n  ↳ [1.금리차] {spread_status} | [2.환율추이] {fx_status} | [3.최종] {final_status}\n"
+            final_status = f"{final_text} {final_emoji} ({final_score:+.2f}%{final_comment})"
+            
+            output += f"*{name}* (현재 {current_fx:.2f} / 기준 {base_fx:.2f})\n"
+            output += f"  ↳ [1.금리차] {spread_status}\n"
+            output += f"  ↳ [2.환율추이] {fx_status}\n"
+            output += f"  ↳ [3.최종] {final_status}\n\n"
         except:
             continue
             
-    return output + "\n"
+    output += "[판단 기준]\n✅ +0.5% 이상 → 매수/보유\n⚠️ -0.3 ~ +0.5% → 관망\n❌ -0.3% 미만 → 매도/기피\n\n"
+    return output
 
 def generate_korean_outreach_report():
     import json
