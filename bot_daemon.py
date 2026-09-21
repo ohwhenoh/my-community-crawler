@@ -93,8 +93,10 @@ def handle_app_mention_events(body, say):
     
     if "상태조회" in text:
         run_health_check(say, user)
-    else:
+    elif "타깃분석" in text or "타깃 분석" in text:
         run_target_analysis(say, user)
+    else:
+        say(f"안녕하세요 <@{user}>님! 저는 MacPro DR Bot 입니다 🤖\n현재 제가 알아들을 수 있는 명령어는 다음과 같습니다:\n• `@MacPro DR Bot 상태조회`: AI API 헬스체크 대시보드 구동\n• `@MacPro DR Bot 타깃분석`: F5 보안 타깃 심층 분석 리포트 생성")
 
 @app.event("message")
 def handle_message_events(body, say):
@@ -109,6 +111,8 @@ def handle_message_events(body, say):
             run_health_check(say, user)
         elif "타깃분석" in text or "타깃 분석" in text:
             run_target_analysis(say, user)
+        else:
+            say(f"안녕하세요 <@{user}>님! 저는 MacPro DR Bot 입니다 🤖\n현재 제가 알아들을 수 있는 명령어는 다음과 같습니다:\n• `상태조회`: AI API 헬스체크 대시보드 구동\n• `타깃분석`: F5 보안 타깃 심층 분석 리포트 생성")
 
 if __name__ == "__main__":
     print("🚀 [Slack Bot] 양방향 Socket Mode 리스너 구동 시작...")
