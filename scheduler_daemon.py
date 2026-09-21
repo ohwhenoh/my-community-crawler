@@ -23,6 +23,19 @@ def run_scraper_job():
     except Exception as e:
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 스케줄러 실행 에러: {str(e)}", flush=True)
 
+
+def run_email_job():
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 스케줄러: 주간 이메일 발송 기동 시작...", flush=True)
+    try:
+        res = subprocess.run([sys.executable, "email_reporter.py"], capture_output=True, text=True)
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 스케줄러: 주간 이메일 발송 완료 (Exit Code: {res.returncode})", flush=True)
+        if res.stdout:
+            print(f"--- 이메일 출력 (STDOUT) ---\n{res.stdout.strip()}", flush=True)
+        if res.stderr:
+            print(f"--- 이메일 오류 (STDERR) ---\n{res.stderr.strip()}", flush=True)
+    except Exception as e:
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 이메일 발송 에러: {str(e)}", flush=True)
+
 if __name__ == "__main__":
     print("=" * 60, flush=True)
     print("🚀 대한민국 6대 산업군 실시간 OSINT 세일즈 스케줄러 데몬 시작", flush=True)
@@ -41,11 +54,14 @@ if __name__ == "__main__":
     if is_dr:
         print("🔧 [DR 모드] 라즈베리파이 백업 노드로 기동되었습니다. 정각 3분 뒤에 중복 검사를 시작합니다.", flush=True)
         trigger_times = ["08:43", "10:53", "15:33"]
+        email_trigger_time = "09:03"
     else:
         print("💻 [Primary 모드] 맥프로 메인 노드로 기동되었습니다.", flush=True)
         trigger_times = ["08:40", "10:50", "15:30"]
+        email_trigger_time = "09:00"
 
     last_trigger_date = ""
+    last_email_trigger_date = ""
     
     try:
         while True:
@@ -53,6 +69,13 @@ if __name__ == "__main__":
             current_time_str = now.strftime("%H:%M")
             current_date_str = now.strftime("%Y-%m-%d")
             
+            # 매주 금요일 이메일 발송 (now.weekday() == 4 is Friday)
+            if now.weekday() == 4 and current_time_str == email_trigger_time:
+                email_trigger_key = f"{current_date_str}_{current_time_str}"
+                if last_email_trigger_date != email_trigger_key:
+                    run_email_job()
+                    last_email_trigger_date = email_trigger_key
+
             if current_time_str in trigger_times:
                 trigger_key = f"{current_date_str}_{current_time_str}"
                 if last_trigger_date != trigger_key:
