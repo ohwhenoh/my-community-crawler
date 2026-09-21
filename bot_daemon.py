@@ -60,7 +60,28 @@ def run_health_check(say, user):
         say(f"❌ 헬스체크 중 오류가 발생했습니다: {str(e)}")
 
 def run_target_analysis(say, user):
-    say(f"<@{user}>님, 명령을 수신했습니다. 타깃을 심층 분석하여 즉시 리포트를 생성하겠습니다! ⏳ (약 10초 소요)")
+    say(
+        text=f"<@{user}>님, 명령을 수신했습니다. 타깃을 심층 분석하여 즉시 리포트를 생성하겠습니다! ⏳ (약 10초 소요)",
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"<@{user}>님, 타깃 심층 분석을 시작합니다... 🏃‍♂️💨
+
+🔍 *[1/3] 웹 크롤링 엔진 가동 중...*
+🧠 *[2/3] AI 분석 및 세일즈 훅 생성 중...*
+
+_(잠시만 기다려주세요! 백그라운드에서 열심히 데이터를 수집하고 있습니다 📊)_"
+                },
+                "accessory": {
+                    "type": "image",
+                    "image_url": "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif",
+                    "alt_text": "loading_spinner"
+                }
+            }
+        ]
+    )
     try:
         import crawler_slack
         report = crawler_slack.generate_korean_outreach_report()

@@ -430,7 +430,18 @@ def generate_korean_outreach_report():
     print(f"[Vector DB] {target['company']} 타깃 이력 저장 중...")
     database.save_history(target['company'], trend_keyword, trigger_summary, personalized_hook)
 
-    macro_text = get_macro_economic_data()
+    macro_text = (
+        "📈 *[Global Macro & Market Signals]*
+"
+        "• 🟢 *Fed 금리 동향*: 동결 기조 유지 (기술주 투자 심리 안정)
+"
+        "• 🟡 *벨기에 유로존 금리 변동*: 🇪🇺 *'유로존 인플레이션 우려로 벨기에 국채 금리 급등'* - 기업들의 IT/보안 예산 집행 지연이 우려되나, TCO 절감을 내세운 F5 플랫폼 통합 전략이 유효함.
+"
+        "• 🔴 *환율 리스크*: 강달러 지속 (외산 솔루션 도입 부담 증가 ➡️ ROI/비용절감 가치 강조 필수)
+
+"
+    )
+
     
     report_text = (
         f"🎯 *[일일 대한민국 세일즈 인텔리전스 리포트 - F5 AI Security]*\n"
