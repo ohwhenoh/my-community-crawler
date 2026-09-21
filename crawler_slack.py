@@ -257,7 +257,6 @@ def get_macro_economic_data():
     try:
         import requests
         from datetime import datetime
-        import yfinance as yf
         
         def get_yahoo_price(ticker):
             try:
@@ -267,14 +266,15 @@ def get_macro_economic_data():
                 res = r.json()['chart']['result'][0]
                 close_prices = res['indicators']['quote'][0]['close']
                 valid_prices = [p for p in close_prices if p is not None]
-                if not valid_prices: return None, None, None, None
+                if not valid_prices: return None, None, None, None, None
                 curr = valid_prices[-1]
                 w1 = valid_prices[-5] if len(valid_prices) >= 5 else valid_prices[0]
                 m1 = valid_prices[-22] if len(valid_prices) >= 22 else valid_prices[0]
+                m3 = valid_prices[-66] if len(valid_prices) >= 66 else valid_prices[0]
                 y1 = valid_prices[0]
-                return curr, w1, m1, y1
+                return curr, w1, m1, m3, y1
             except:
-                return None, None, None, None
+                return None, None, None, None, None
 
         fx_text = ":chart_with_upwards_trend: *[Global Macro & Market Signals]*\n"
         fx_text += "• :large_green_circle: Fed 금리 동향: 동결 기조 유지 (기술주 투자 심리 안정)\n"
@@ -282,7 +282,7 @@ def get_macro_economic_data():
         bonds = {'미국 10년': 'IEF', '일본 10년': '2515.T', '영국 10년': 'IGLT.L', '중국 10년': 'CBON', '벨기에 10년': 'XG7S.MI', '캐나다 10년': 'XGB.TO'}
         bond_text = ":chart_with_downwards_trend: *[주요국 10년물 국채 가격 동향 (ETF 기반)]*\n"
         for country, ticker in bonds.items():
-            curr, w1, m1, y1 = get_yahoo_price(ticker)
+            curr, w1, m1, m3, y1 = get_yahoo_price(ticker)
             if not curr: continue
             
             if curr < m1:
@@ -312,11 +312,10 @@ def get_macro_economic_data():
         
         for name, (code, ticker) in pairs.items():
             try:
-                data = yf.download(ticker, period='3mo', progress=False)
-                if data.empty: continue
+                # Use robust Yahoo requests directly instead of broken yf.download
+                current_fx, _, _, base_fx, _ = get_yahoo_price(ticker)
+                if not current_fx or not base_fx: continue
                     
-                current_fx = float(data['Close'].iloc[-1].item())
-                base_fx = float(data['Close'].iloc[0].item())
                 target_rate = rates[code]
                 us_rate = rates['US']
                 
