@@ -83,10 +83,6 @@ def handle_app_mention_events(body, say):
     except Exception as e:
         say(f"❌ 분석 중 오류가 발생했습니다: {str(e)}")
 
-@app.message("타깃분석")
-def message_hello(message, say):
-    say("네! 타깃 분석을 원하시면 저를 멘션(@CrawlerBot)하고 명령해주세요!")
-
 
 @app.event("message")
 def handle_message_events(body, say):
@@ -95,64 +91,78 @@ def handle_message_events(body, say):
     user = event.get("user")
     channel_type = event.get("channel_type")
     
-    # DM(Direct Message) 채널에서 멘션 없이 그냥 말 걸었을 때도 응답하도록 예외 처리
-    
-    if channel_type == "im" and "상태조회" in text:
-        say("🏥 AI API Health Dashboard를 구동합니다. 잠시만 기다려주세요...")
-        try:
-            import time
-            import os
-            from openai import OpenAI
-            
-            upstage_key = os.getenv("UPSTAGE_API_KEY", "")
-            nvidia_key = os.getenv("NVIDIA_API_KEY", "")
-            
-            result_msg = "=========================================\n 🏥 *AI API Health & Latency Dashboard*\n=========================================\n\n"
-            
-            # 1. NVIDIA Test
-            result_msg += "*[1] Testing NVIDIA NIM (Llama 3.2 11B)...*\n"
-            start_time = time.time()
+    # DM(Direct Message) 채널에서 멘션 없이 그냥 말 걸었을 때 응답
+    if channel_type == "im":
+        if "상태조회" in text:
+            say(f"<@{user}>님, 🏥 AI API Health Dashboard를 구동합니다. 잠시만 기다려주세요...")
             try:
-                client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=6.0, max_retries=0)
-                res = client.chat.completions.create(
-                    model="meta/llama-3.2-11b-vision-instruct",
-                    messages=[{"role": "user", "content": "Ping"}],
-                    max_tokens=10
-                )
-                latency = time.time() - start_time
-                result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Noisy Neighbor: SAFE\n\n"
-            except Exception as e:
-                latency = time.time() - start_time
-                result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`\n\n"
+                import time
+                import os
+                from openai import OpenAI
+                
+                upstage_key = os.getenv("UPSTAGE_API_KEY", "")
+                nvidia_key = os.getenv("NVIDIA_API_KEY", "")
+                
+                result_msg = "=========================================
+ 🏥 *AI API Health & Latency Dashboard*
+=========================================
 
-            # 2. Upstage Test
-            result_msg += "*[2] Testing Upstage (Solar Mini)...*\n"
-            start_time = time.time()
-            try:
-                client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=upstage_key, timeout=10.0, max_retries=0)
-                res = client.chat.completions.create(
-                    model="solar-1-mini-chat",
-                    messages=[{"role": "user", "content": "Ping"}],
-                    max_tokens=10
-                )
-                latency = time.time() - start_time
-                result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s`\n"
+"
+                
+                # 1. NVIDIA Test
+                result_msg += "*[1] Testing NVIDIA NIM (Llama 3.2 11B)...*
+"
+                start_time = time.time()
+                try:
+                    client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=6.0, max_retries=0)
+                    client.chat.completions.create(
+                        model="meta/llama-3.2-11b-vision-instruct",
+                        messages=[{"role": "user", "content": "Ping"}],
+                        max_tokens=10
+                    )
+                    latency = time.time() - start_time
+                    result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Noisy Neighbor: SAFE
+
+"
+                except Exception as e:
+                    latency = time.time() - start_time
+                    result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`
+
+"
+
+                # 2. Upstage Test
+                result_msg += "*[2] Testing Upstage (Solar Mini)...*
+"
+                start_time = time.time()
+                try:
+                    client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=upstage_key, timeout=10.0, max_retries=0)
+                    client.chat.completions.create(
+                        model="solar-1-mini-chat",
+                        messages=[{"role": "user", "content": "Ping"}],
+                        max_tokens=10
+                    )
+                    latency = time.time() - start_time
+                    result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s`
+"
+                except Exception as e:
+                    latency = time.time() - start_time
+                    result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`
+"
+                
+                say(result_msg)
             except Exception as e:
-                latency = time.time() - start_time
-                result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`\n"
+                say(f"❌ 헬스체크 중 오류가 발생했습니다: {str(e)}")
+            return
             
-            say(result_msg)
-        except Exception as e:
-            say(f"❌ 헬스체크 중 오류가 발생했습니다: {str(e)}")
-        return
-    if channel_type == "im" and "타깃분석" in text:
-        say(f"<@{user}>님, DM 명령을 수신했습니다. 타깃을 심층 분석하여 즉시 리포트를 생성하겠습니다! ⏳ (약 10초 소요)")
-        try:
-            import crawler_slack
-            report = crawler_slack.generate_korean_outreach_report()
-            say(report)
-        except Exception as e:
-            say(f"❌ 분석 중 오류가 발생했습니다: {str(e)}")
+        if "타깃분석" in text:
+            say(f"<@{user}>님, DM 명령을 수신했습니다. 타깃을 심층 분석하여 즉시 리포트를 생성하겠습니다! ⏳ (약 10초 소요)")
+            try:
+                import crawler_slack
+                report = crawler_slack.generate_korean_outreach_report()
+                say(report)
+            except Exception as e:
+                say(f"❌ 분석 중 오류가 발생했습니다: {str(e)}")
+            return
 
 if __name__ == "__main__":
     print("🚀 [Slack Bot] 양방향 Socket Mode 리스너 구동 시작...")
