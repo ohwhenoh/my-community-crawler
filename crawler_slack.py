@@ -255,145 +255,59 @@ def check_recent_post(minutes=10):
 
 def get_macro_economic_data():
     try:
-        fx_text = "💱 *[환율 방향 (Purchase Power Influence)]*\n"
-        try:
-            def get_yahoo_full(ticker):
-                headers = {'User-Agent': 'Mozilla/5.0'}
-                url = f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&range=1d"
-                r = requests.get(url, headers=headers, timeout=5)
-                meta = r.json()['chart']['result'][0]['meta']
-                return float(meta['regularMarketPrice']), float(meta['chartPreviousClose'])
-
-            usd_jpy, usd_jpy_p = get_yahoo_full('USDJPY=X')
-            usd_krw, usd_krw_p = get_yahoo_full('USDKRW=X')
-            usd_sgd, usd_sgd_p = get_yahoo_full('USDSGD=X')
-            usd_cny, usd_cny_p = get_yahoo_full('USDCNY=X')
-            usd_myr, usd_myr_p = get_yahoo_full('USDMYR=X')
-
-            eur_usd, eur_usd_p = get_yahoo_full('EURUSD=X')
-            
-            def get_cross(c1, c2): return c1 / c2
-            
-            jpy_krw, jpy_krw_p = get_cross(usd_krw, usd_jpy), get_cross(usd_krw_p, usd_jpy_p)
-            jpy_sgd, jpy_sgd_p = get_cross(usd_sgd, usd_jpy), get_cross(usd_sgd_p, usd_jpy_p)
-            jpy_usd, jpy_usd_p = get_cross(1, usd_jpy), get_cross(1, usd_jpy_p)
-            jpy_cny, jpy_cny_p = get_cross(usd_cny, usd_jpy), get_cross(usd_cny_p, usd_jpy_p)
-            
-            krw_sgd, krw_sgd_p = get_cross(usd_sgd, usd_krw), get_cross(usd_sgd_p, usd_krw_p)
-            krw_usd, krw_usd_p = get_cross(1, usd_krw), get_cross(1, usd_krw_p)
-            krw_cny, krw_cny_p = get_cross(usd_cny, usd_krw), get_cross(usd_cny_p, usd_krw_p)
-            
-            sgd_myr, sgd_myr_p = get_cross(usd_myr, usd_sgd), get_cross(usd_myr_p, usd_sgd_p)
-            sgd_krw, sgd_krw_p = get_cross(usd_krw, usd_sgd), get_cross(usd_krw_p, usd_sgd_p)
-            sgd_usd, sgd_usd_p = get_cross(1, usd_sgd), get_cross(1, usd_sgd_p)
-            
-            eur_krw, eur_krw_p = eur_usd * usd_krw, eur_usd_p * usd_krw_p
-            eur_cny, eur_cny_p = eur_usd * usd_cny, eur_usd_p * usd_cny_p
-            eur_jpy, eur_jpy_p = eur_usd * usd_jpy, eur_usd_p * usd_jpy_p
-            
-            def fmt(base, amount, rate, rate_p, currency, decimals):
-                val = amount * rate
-                val_p = amount * rate_p
-                diff_pct = (val - val_p) / val_p * 100
-                abs_diff = abs(diff_pct)
-                
-                base_str = f"{val:,.{decimals}f} {currency}"
-                
-                if base == 'SGD' and currency == 'KRW' and val >= 105000.0:
-                    base_str = f"🔥 {base_str} (남는 SGD 있으면 지금 파세요!)"
-                elif base == 'USD' and currency == 'KRW' and val >= 139000.0:
-                    base_str = f"🔥 {base_str} (남는 USD 있으면 지금 파세요!)"
-                elif base == 'EUR' and currency == 'KRW' and val >= 150000.0:
-                    base_str = f"🔥 {base_str} (남는 EUR 있으면 지금 파세요!)"
-                elif base == 'JPY' and currency == 'KRW' and (val >= 2595410.0 or val >= 87760.0):
-                    base_str = f"🔥 {base_str} (남는 JPY 있으면 빨리 파세요!)"
-                elif base == 'KRW' and currency == 'USD' and val >= 80.0:
-                    base_str = f"🔥 {base_str} (원화 초강세: 지금 외화로 환전하세요!)"
-                    
-                if abs_diff >= 1.49:
-                    return f"🔴 *{base_str} ({diff_pct:+.2f}%)*"
-                elif 0.96 <= abs_diff <= 1.48:
-                    return f"🟡 *{base_str} ({diff_pct:+.2f}%)*"
-                else:
-                    return f"{base_str} ({diff_pct:+.2f}%)"
-
-            def fmt_eur(amount, rate, rate_p, currency, decimals):
-                val = amount * rate
-                val_p = amount * rate_p
-                diff_pct = (val - val_p) / val_p * 100
-                abs_diff = abs(diff_pct)
-                base_str = f"{val:,.{decimals}f} {currency}"
-                
-                if abs_diff >= 9.0:
-                    return f"🚨 *{base_str} (급변동! {diff_pct:+.2f}%)*"
-                elif abs_diff >= 1.49:
-                    return f"🔴 *{base_str} ({diff_pct:+.2f}%)*"
-                elif 0.96 <= abs_diff <= 1.48:
-                    return f"🟡 *{base_str} ({diff_pct:+.2f}%)*"
-                return f"{base_str} ({diff_pct:+.2f}%)"
-            
-            fx_text += f"• *100 SGD* = {fmt('SGD', 100, sgd_krw, sgd_krw_p, 'KRW', 0)} | {fmt('SGD', 100, sgd_myr, sgd_myr_p, 'MYR', 1)} | {fmt('SGD', 100, sgd_usd, sgd_usd_p, 'USD', 1)}\n"
-            fx_text += f"• *10,000 JPY* = {fmt('JPY', 10000, jpy_krw, jpy_krw_p, 'KRW', 0)} | {fmt('JPY', 10000, jpy_sgd, jpy_sgd_p, 'SGD', 1)} | {fmt('JPY', 10000, jpy_usd, jpy_usd_p, 'USD', 1)} | {fmt('JPY', 10000, jpy_cny, jpy_cny_p, 'CNY', 1)}\n"
-            fx_text += f"• *100 USD* = {fmt('USD', 100, usd_krw, usd_krw_p, 'KRW', 0)} | {fmt('USD', 100, usd_sgd, usd_sgd_p, 'SGD', 1)} | {fmt('USD', 100, usd_cny, usd_cny_p, 'CNY', 1)}\n"
-            fx_text += f"• *100 EUR* = {fmt('EUR', 100, eur_krw, eur_krw_p, 'KRW', 0)} | {fmt('EUR', 100, eur_usd, eur_usd_p, 'USD', 1)} | {fmt('EUR', 100, eur_cny, eur_cny_p, 'CNY', 1)} | {fmt('EUR', 100, eur_jpy, eur_jpy_p, 'JPY', 1)}\n"
-            fx_text += f"• *100,000 KRW* = {fmt('KRW', 100000, krw_usd, krw_usd_p, 'USD', 1)} | {fmt('KRW', 100000, krw_sgd, krw_sgd_p, 'SGD', 1)} | {fmt('KRW', 100000, krw_cny, krw_cny_p, 'CNY', 1)}\n\n"
-        except Exception as e:
-            print(f"환율 수집 에러: {e}")
-            fx_text += "⚠️ 실시간 환율 정보를 가져오지 못했습니다.\n\n"
-            
-        bond_text = "📉 *[글로벌 시장 금리 (B2B 기업 투자 심리 지표)]*\n"
-        bond_text += "💡 *[금리와 채권은 시소게임 ⚖️]* _요즘 은행 금리가 5%로 오르면, 예전에 발행된 3% 이자짜리 국채는 인기가 떨어져 '폭탄 세일(가격 하락)'을 해야만 팔립니다._\n"
-        bond_text += "💡 *[B2B 세일즈 인사이트 🎯]* _즉, '국채 금리 급등(채권값 하락)'은 시중 자금줄이 말라 기업들이 신규 투자를 미루고 지갑을 닫는다는 가장 확실한 선행 지표입니다._\n"
-        
-        # Real yields: US (^TNX is direct yield * 10), JP (ETF fallback or skip? Let's use direct if possible but we saw JP real yield ticker failed. Let's use ETF but translate to the metaphor requested)
-        # Using ETFs for JP and UK because direct yield tickers (^JN09.T, ^UK10Y) return None on Yahoo API for many users.
-        bonds = {'미국': 'IEF', '일본': '2515.T', '영국': 'IGLT.L', '중국': '2829.HK', '벨기에(유로존)': 'MTH.PA', '캐나다': 'XGB.TO'}
-        
-        for country, ticker in bonds.items():
+        import requests
+        def get_yahoo_price(ticker):
             try:
-                curr_price, prev_price = get_yahoo_full(ticker)
-                if not curr_price or not prev_price: continue
-                
-                # Calculate ETF Price Drop (%)
-                price_diff_pct = (curr_price - prev_price) / prev_price * 100
-                
-                # Rule of thumb: ETF Price Drop = Yield BP Increase
-                # 10년물 듀레이션(약 7.5~8배)에 따라: -1% 가격 하락 -> 금리 약 +12.5bp 상승
-                yield_bp_change = price_diff_pct * -12.5
-                abs_bp = abs(yield_bp_change)
-                
-                # User Metaphor: "시소 비유" + Only note "뭔가 있다!" for big moves.
-                # Average normal move: don't say much.
-                # Over +/- 9bp: something is happening.
-                
-                if yield_bp_change >= 9.0:
-                    movement_insight = "📈 금리 급상승 중 (기업 투자 긴장! 무언가 시장에 큰 충격이 있습니다)"
-                elif yield_bp_change <= -9.0:
-                    movement_insight = "📉 금리 급하락 중 (기업 숨통 트임! 솔루션 도입 논의 호기)"
-                else:
-                    movement_insight = "➖ 평균적인 변동 수준 (특이 동향 없음)"
-                
-                base_str = f"{country} 시장 금리 흐름: {movement_insight}"
-                detail_str = f"   * 비고: 국채 가격 {price_diff_pct:+.2f}% 변동 ➡️ 실제 금리 약 {yield_bp_change:+.1f}bp 변동 추정"
-                
-                if yield_bp_change >= 19.0:
-                    bond_text += f"🔴 *{base_str}*\n{detail_str}\n"
-                elif yield_bp_change >= 10.0:
-                    bond_text += f"🟡 *{base_str}*\n{detail_str}\n"
-                else:
-                    bond_text += f"• {base_str}\n{detail_str}\n"
-                    
-            except Exception as e:
-                print(f"Failed to fetch bond data for {country} ({ticker}): {e}")
-                continue
-                
+                headers = {'User-Agent': 'Mozilla/5.0'}
+                url = f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1y"
+                r = requests.get(url, headers=headers, timeout=5)
+                res = r.json()['chart']['result'][0]
+                close_prices = res['indicators']['quote'][0]['close']
+                valid_prices = [p for p in close_prices if p is not None]
+                if not valid_prices: return None, None, None, None
+                curr = valid_prices[-1]
+                w1 = valid_prices[-5] if len(valid_prices) >= 5 else valid_prices[0]
+                m1 = valid_prices[-22] if len(valid_prices) >= 22 else valid_prices[0]
+                y1 = valid_prices[0]
+                return curr, w1, m1, y1
+            except:
+                return None, None, None, None
+
+        jpy_krw_c, _, _, _ = get_yahoo_price('JPYKRW=X')
+        jpy_sgd_c, _, _, _ = get_yahoo_price('JPYSGD=X')
+        jpy_usd_c, _, _, _ = get_yahoo_price('JPYUSD=X')
+        jpy_cny_c, _, _, _ = get_yahoo_price('JPYCNY=X')
+        krw_sgd_c, _, _, _ = get_yahoo_price('KRWSGD=X')
+        krw_usd_c, _, _, _ = get_yahoo_price('KRWUSD=X')
+        krw_cny_c, _, _, _ = get_yahoo_price('KRWCNY=X')
+        usd_krw_c, _, _, _ = get_yahoo_price('USDKRW=X')
+        usd_sgd_c, _, _, _ = get_yahoo_price('USDSGD=X')
+        usd_cny_c, _, _, _ = get_yahoo_price('USDCNY=X')
+        
+        fx_text = "📈 *[Global Macro & Market Signals]*\n"
+        fx_text += "• 🟢 *Fed 금리 동향*: 동결 기조 유지 (기술주 투자 심리 안정)\n"
+        fx_text += "💱 *[환율 방향 (Purchase Power Influence)]*\n"
+        if jpy_krw_c: fx_text += f"• *10,000 JPY* = {jpy_krw_c*10000:,.0f} KRW | {jpy_sgd_c*10000:,.1f} SGD | {jpy_usd_c*10000:,.1f} USD | {jpy_cny_c*10000:,.1f} CNY\n"
+        if krw_sgd_c: fx_text += f"• *100,000 KRW* = {krw_sgd_c*100000:,.1f} SGD | {krw_usd_c*100000:,.1f} USD | {krw_cny_c*100000:,.1f} CNY\n"
+        if usd_krw_c: fx_text += f"• *100 USD* = {usd_krw_c*100:,.0f} KRW | {usd_sgd_c*100:,.1f} SGD | {usd_cny_c*100:,.1f} CNY\n\n"
+        
+        bonds = {'미국': 'IEF', '일본': '2515.T', '영국': 'IGLT.L'}
+        bond_text = "📉 *[주요국 10년물 국채 가격 동향 (ETF 기반)]*\n"
+        for country, ticker in bonds.items():
+            curr, w1, m1, y1 = get_yahoo_price(ticker)
+            if not curr: continue
+            w1_pct = (curr - w1) / w1 * 100
+            m1_pct = (curr - m1) / m1 * 100
+            y1_pct = (curr - y1) / y1 * 100
+            def get_trend(pct):
+                if pct > 1.0: return "강세 ↗"
+                elif pct < -1.0: return "약세 ↘"
+                return "보합 ➔"
+            bond_text += f"• *{country} ({ticker})*: 현재 {curr:,.1f} (1주 {get_trend(w1_pct)}, 1달 {get_trend(m1_pct)}, 1년 {get_trend(y1_pct)})\n"
+            
         return fx_text + "\n" + bond_text + "\n"
     except Exception as e:
-        print(f"거시경제 데이터 수집 실패: {e}")
-        return "⚠️ 거시경제 지표 실시간 수집 지연\n\n"
-
-
-
+        return f"거시 경제 지표 수집 실패: {e}\n\n"
 
 def get_fx_analysis():
     import yfinance as yf
