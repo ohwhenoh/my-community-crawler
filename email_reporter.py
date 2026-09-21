@@ -55,12 +55,12 @@ def get_macro_email_content():
 def send_email():
     load_env()
     
-    smtp_server = os.environ.get("SMTP_SERVER", "smtp.office365.com")
+    smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
     smtp_port = int(os.environ.get("SMTP_PORT", 587))
     smtp_user = os.environ.get("SMTP_USER", "")
     smtp_pass = os.environ.get("SMTP_PASS", "")
     
-    to_email = "owen.choi@outlook.sg"
+    to_email = os.environ.get("RECIPIENT_EMAIL", "owen.choi@outlook.sg")
     
     if not smtp_user or not smtp_pass:
         print("이메일 발송 실패: .env 파일에 SMTP_USER 및 SMTP_PASS가 설정되지 않았습니다.")
