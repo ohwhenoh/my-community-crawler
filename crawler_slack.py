@@ -452,22 +452,14 @@ def get_fx_analysis():
             
             # [3] 최종 판단
             final_score = target_rate + fx_gain - us_rate
-            final_comment = ""
             
             if final_score >= 0.5:
-                final_text = "매수/보유"
-                final_emoji = "✅"
+                final_status = f"🔥 엑셀 밟으세요! (수익이 기대되는 황금 타이밍) [{final_score:+.2f}%]"
             elif final_score >= -0.3:
-                final_text = "관망"
-                final_emoji = "⚠️"
-                if -0.2 <= final_score <= 0.2:
-                    final_comment = " → 수수료 고려 시 본전 수준"
+                final_status = f"⏸️ 기어 중립! (수수료 떼면 남는 게 없어요, 잠시 대기) [{final_score:+.2f}%]"
             else:
-                final_text = "재검토 필요" if code == 'KR' else "매도/기피"
-                final_emoji = "❌"
+                final_status = f"🛑 브레이크! (지금 들어가면 물립니다. 절대 진입 금지) [{final_score:+.2f}%]"
                 
-            final_status = f"{final_text} {final_emoji} ({final_score:+.2f}%{final_comment})"
-            
             output += f"*{name}* (현재 {current_fx:.2f} / 기준 {base_fx:.2f})\n"
             output += f"  ↳ [1.금리차] {spread_status}\n"
             output += f"  ↳ [2.환율추이] {fx_status}\n"
@@ -475,7 +467,7 @@ def get_fx_analysis():
         except:
             continue
             
-    output += "[판단 기준]\n✅ +0.5% 이상 → 매수/보유\n⚠️ -0.3 ~ +0.5% → 관망\n❌ -0.3% 미만 → 매도/기피\n\n"
+    output += "[직관적 판단 기준]\n🔥 +0.5% 이상 → 엑셀 밟으세요! (적극 환전/투자)\n⏸️ -0.3 ~ +0.5% → 기어 중립! (잠시 대기)\n🛑 -0.3% 미만 → 브레이크! (진입 절대 금지)\n\n"
     return output
 
 def generate_korean_outreach_report():
