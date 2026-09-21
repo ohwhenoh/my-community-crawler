@@ -506,7 +506,7 @@ class MicroSignalHunter:
             return ["  💤 최근 1주 내 특이 시그널(채용/보안) 없음."]
         return signals
 
-def generate_korean_outreach_report():
+def generate_korean_outreach_report(return_target=False):
     import json
     with open('targets.json', 'r', encoding='utf-8') as f:
         KOREAN_TARGET_DATABASE = json.load(f)
@@ -684,21 +684,59 @@ def generate_korean_outreach_report():
     except Exception as e:
         print(f"주간 트렌드 캐시 로드 에러: {e}")
 
+    if return_target:
+        return report_text, target["company"]
     return report_text
 
-def send_to_slack(message):
-
-
-    """
-    Sends the compiled Korean outreach card to Slack.
-    """
+def send_to_slack(message, target_company="타깃 기업"):
     if not SLACK_WEBHOOK_URL or SLACK_WEBHOOK_URL == "YOUR_SLACK_WEBHOOK_URL_HERE":
         print("알림: SLACK_WEBHOOK_URL이 구성되지 않았습니다.")
         return False
         
-    payload = {
-        "text": message
-    }
+    import urllib.parse
+    import json
+    import urllib.request
+    
+    company_query = urllib.parse.quote(target_company)
+    
+    blocks = []
+    # Split using literal \n characters
+    paragraphs = message.split('\n\n')
+    current_text = ""
+    for p in paragraphs:
+        if len(current_text) + len(p) + 2 > 2900:
+            blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": current_text}})
+            current_text = p + "\n\n"
+        else:
+            current_text += p + "\n\n"
+            
+    if current_text:
+        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": current_text}})
+        
+    blocks.append({
+        "type": "actions",
+        "elements": [
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "📝 CRM(Salesforce) 기록", "emoji": True},
+                "url": "https://login.salesforce.com/",
+                "style": "primary"
+            },
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "💼 실시간 채용공고 탐색", "emoji": True},
+                "url": f"https://www.linkedin.com/jobs/search/?keywords={company_query}%20보안",
+                "style": "primary"
+            },
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "🌐 최신 뉴스 검색", "emoji": True},
+                "url": f"https://www.google.com/search?q={company_query}%20보안%20OR%20해킹%20OR%20클라우드&tbm=nws"
+            }
+        ]
+    })
+        
+    payload = {"text": "F5 세일즈 리포트 도착", "blocks": blocks}
     data = json.dumps(payload).encode('utf-8')
     
     try:
@@ -709,13 +747,10 @@ def send_to_slack(message):
         )
         with urllib.request.urlopen(req, timeout=12) as response:
             if response.status in (200, 201):
-                print("슬랙으로 한국향 산업군별 리포트를 성공적으로 전송했습니다.")
+                print("슬랙으로 성공적으로 전송했습니다. (인터랙티브 버튼 포함)")
                 return True
-            else:
-                print(f"슬랙 응답 에러: Status {response.status}")
-                return False
     except Exception as e:
-        print(f"슬랙 전송 에러: {str(e)}")
+        print(f"슬랙 전송 실패: {e}")
         return False
 
 if __name__ == "__main__":
@@ -727,6 +762,6 @@ if __name__ == "__main__":
             import sys
             sys.exit(0)
             
-    report = generate_korean_outreach_report()
-    send_to_slack(report)
+    report, target_comp = generate_korean_outreach_report(return_target=True)
+    send_to_slack(report, target_comp)
 
