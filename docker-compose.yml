@@ -6,6 +6,8 @@ services:
     container_name: task_board_scheduler
     restart: unless-stopped
     command: ["python", "-u", "scheduler_daemon.py"]
+    env_file:
+      - .env
     environment:
       - IS_DR_NODE=True
     volumes:
@@ -24,6 +26,8 @@ services:
     container_name: task_board_bot
     restart: unless-stopped
     command: ["python", "-u", "bot_daemon.py"]
+    env_file:
+      - .env
     volumes:
       - ./.env:/app/.env:ro
       - ./data:/app/data
