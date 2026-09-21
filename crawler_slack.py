@@ -435,20 +435,17 @@ def get_fx_analysis():
             fx_change_pct = (current_fx / base_fx - 1) * 100
             fx_gain = -fx_change_pct
             
-            if fx_gain >= 3.0:
-                fx_comment = "강세 지속"
-                fx_emoji = "✅"
-            elif fx_gain >= 1.0:
-                fx_comment = "약한 강세"
-                fx_emoji = "⚠️"
+            if fx_gain >= 1.0:
+                fx_comment = "외산 솔루션 도입 부담 감소"
+                fx_emoji = "🟢"
             elif fx_gain > -1.0:
-                fx_comment = "횡보"
-                fx_emoji = "⚠️"
+                fx_comment = "도입 부담 평이 (횡보)"
+                fx_emoji = "🟡"
             else:
-                fx_comment = "원화 약세 → 환차손" if code == 'KR' else "약세 지속"
-                fx_emoji = "❌"
+                fx_comment = "외산 솔루션 도입 부담 가중"
+                fx_emoji = "🔴"
                 
-            fx_status = f"{fx_gain:+.1f}% ({fx_comment}) {fx_emoji}"
+            fx_status = f"{fx_gain:+.1f}% ({fx_comment} {fx_emoji})"
             
             # [3] 최종 판단
             final_score = target_rate + fx_gain - us_rate
@@ -536,8 +533,11 @@ def generate_korean_outreach_report():
             try: m1_price = hist.loc[hist.index >= (hist.index[-1] - timedelta(days=30))]['Close'].iloc[0]
             except: m1_price = curr_price
             
-            # 국채 가격 자체의 방향 표기
-            direction = "상승 📈" if curr_price > m1_price else "하락 📉"
+            # 국채 가격 자체의 방향 표기 및 세일즈 시사점
+            if curr_price > m1_price:
+                direction = "상승 📈 ➡️ [기업 대출 이자 부담 완화 🟢 / 신규 솔루션 투자 재개 기대]"
+            else:
+                direction = "하락 📉 ➡️ [기업 대출 이자 부담 증가 🔴 / 신규 솔루션 투자 감소 우려]"
             bond_text += f"  • {country} 국채 가격 {direction} (1개월 전: {m1_price:,.2f} ➡️ 현재: {curr_price:,.2f})\n"
     except Exception as e:
         bond_text = "  • (국채 데이터 실시간 조회 지연)\n"
