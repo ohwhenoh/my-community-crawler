@@ -84,7 +84,45 @@ def run_target_analysis(say, user):
     except Exception as e:
         say(f"❌ 분석 중 오류가 발생했습니다: {str(e)}")
 
+
+def chat_with_llm(say, user, text):
+    nvidia_key = os.getenv("NVIDIA_API_KEY", "")
+    upstage_key = os.getenv("UPSTAGE_API_KEY", "")
+    
+    if not nvidia_key and not upstage_key:
+        say(f"<@{user}>님, 죄송합니다. AI 키가 없어 일반 대화가 불가능합니다.")
+        return
+        
+    try:
+        client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=15.0, max_retries=1)
+        response = client.chat.completions.create(
+            model="meta/llama-3.2-11b-vision-instruct",
+            messages=[
+                {"role": "system", "content": "당신은 F5 네트워크 보안 세일즈를 돕는 똑똑한 AI 비서 'MacPro DR Bot'입니다. 사용자의 질문에 자연스럽고 친절하게 한국어로 대답해주세요. 만약 시스템 상태나 헬스를 물어보면 '상태조회' 명령어를, 세일즈 리포트를 원하면 '타깃분석' 명령어를 타이핑해 달라고 안내해 주세요."},
+                {"role": "user", "content": text}
+            ],
+            max_tokens=800
+        )
+        reply = response.choices[0].message.content
+        say(f"<@{user}>님\n{reply}")
+    except Exception as e:
+        try:
+            client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=upstage_key, timeout=15.0, max_retries=1)
+            response = client.chat.completions.create(
+                model="solar-1-mini-chat",
+                messages=[
+                    {"role": "system", "content": "당신은 F5 네트워크 보안 세일즈를 돕는 똑똑한 AI 비서 'MacPro DR Bot'입니다. 사용자의 질문에 자연스럽고 친절하게 한국어로 대답해주세요. 만약 시스템 상태나 헬스를 물어보면 '상태조회' 명령어를, 세일즈 리포트를 원하면 '타깃분석' 명령어를 타이핑해 달라고 안내해 주세요."},
+                    {"role": "user", "content": text}
+                ],
+                max_tokens=800
+            )
+            reply = response.choices[0].message.content
+            say(f"<@{user}>님\n{reply}")
+        except Exception as e2:
+            say(f"<@{user}>님, 죄송합니다. 지금은 AI 두뇌에 과부하가 발생했습니다. 나중에 다시 시도해주세요.")
+
 @app.event("app_mention")
+
 def handle_app_mention_events(body, say):
     print(f"🔔 [Event Received] app_mention: {body.get('event', {}).get('text')}")
     event = body.get("event", {})
@@ -96,7 +134,7 @@ def handle_app_mention_events(body, say):
     elif "타깃분석" in text or "타깃 분석" in text:
         run_target_analysis(say, user)
     else:
-        say(f"안녕하세요 <@{user}>님! 저는 MacPro DR Bot 입니다 🤖\n현재 제가 알아들을 수 있는 명령어는 다음과 같습니다:\n• `@MacPro DR Bot 상태조회`: AI API 헬스체크 대시보드 구동\n• `@MacPro DR Bot 타깃분석`: F5 보안 타깃 심층 분석 리포트 생성")
+        chat_with_llm(say, user, text)
 
 @app.event("message")
 def handle_message_events(body, say):
@@ -112,7 +150,7 @@ def handle_message_events(body, say):
         elif "타깃분석" in text or "타깃 분석" in text:
             run_target_analysis(say, user)
         else:
-            say(f"안녕하세요 <@{user}>님! 저는 MacPro DR Bot 입니다 🤖\n현재 제가 알아들을 수 있는 명령어는 다음과 같습니다:\n• `상태조회`: AI API 헬스체크 대시보드 구동\n• `타깃분석`: F5 보안 타깃 심층 분석 리포트 생성")
+            chat_with_llm(say, user, text)
 
 if __name__ == "__main__":
     print("🚀 [Slack Bot] 양방향 Socket Mode 리스너 구동 시작...")
