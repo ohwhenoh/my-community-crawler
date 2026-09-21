@@ -60,11 +60,10 @@ def run_health_check(say, user):
         say(f"❌ 헬스체크 중 오류가 발생했습니다: {str(e)}")
 
 def run_target_analysis(say, user):
-    say(text=f"<@{user}>님, 명령을 수신했습니다. 타깃을 심층 분석하여 즉시 리포트를 생성하겠습니다! ⏳ (약 10초 소요)")
+    say(text=f"<@{user}>님, 명령을 수신했습니다. ⏳ (약 10초 소요)\n\n🔍 *[1/3] 웹 크롤링 엔진 가동 중...*\n🧠 *[2/3] AI 분석 및 세일즈 훅 생성 중...*\n\n_(잠시만 기다려주세요! 📊)_")
     try:
         import crawler_slack
         report, target_company = crawler_slack.generate_korean_outreach_report(return_target=True)
-        # Using the webhook send_to_slack instead of say to avoid block building syntax issues
         crawler_slack.send_to_slack(report, target_company)
     except Exception as e:
         say(f"❌ 분석 중 오류가 발생했습니다: {str(e)}")

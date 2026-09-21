@@ -713,25 +713,14 @@ def send_to_slack(message, target_company="타깃 기업"):
     if current_text:
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": current_text}})
         
+    import urllib.parse
+    company_query = urllib.parse.quote(target_company)
     blocks.append({
-        "type": "actions",
+        "type": "context",
         "elements": [
             {
-                "type": "button",
-                "text": {"type": "plain_text", "text": "📝 CRM(Salesforce) 기록", "emoji": True},
-                "url": "https://login.salesforce.com/",
-                "style": "primary"
-            },
-            {
-                "type": "button",
-                "text": {"type": "plain_text", "text": "💼 실시간 채용공고 탐색", "emoji": True},
-                "url": f"https://www.linkedin.com/jobs/search/?keywords={company_query}%20보안",
-                "style": "primary"
-            },
-            {
-                "type": "button",
-                "text": {"type": "plain_text", "text": "🌐 최신 뉴스 검색", "emoji": True},
-                "url": f"https://www.google.com/search?q={company_query}%20보안%20OR%20해킹%20OR%20클라우드&tbm=nws"
+                "type": "mrkdwn",
+                "text": f"🚀 *세일즈 액션*:  <https://login.salesforce.com/|📝 CRM(Salesforce) 기록>  |  <https://www.linkedin.com/jobs/search/?keywords={company_query}%20보안|💼 실시간 채용공고 탐색>  |  <https://www.google.com/search?q={company_query}%20보안%20OR%20해킹%20OR%20클라우드&tbm=nws|🌐 최신 뉴스 검색>"
             }
         ]
     })
