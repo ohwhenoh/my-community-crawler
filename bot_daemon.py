@@ -86,6 +86,7 @@ def run_target_analysis(say, user):
 
 @app.event("app_mention")
 def handle_app_mention_events(body, say):
+    print(f"🔔 [Event Received] app_mention: {body.get('event', {}).get('text')}")
     event = body.get("event", {})
     text = event.get("text", "")
     user = event.get("user")
@@ -97,6 +98,7 @@ def handle_app_mention_events(body, say):
 
 @app.event("message")
 def handle_message_events(body, say):
+    print(f"📩 [Message Received] type: {body.get('event', {}).get('channel_type')}, text: {body.get('event', {}).get('text')}")
     event = body.get("event", {})
     text = event.get("text", "")
     user = event.get("user")
@@ -105,7 +107,7 @@ def handle_message_events(body, say):
     if channel_type == "im":
         if "상태조회" in text:
             run_health_check(say, user)
-        elif "타깃분석" in text:
+        elif "타깃분석" in text or "타깃 분석" in text:
             run_target_analysis(say, user)
 
 if __name__ == "__main__":
