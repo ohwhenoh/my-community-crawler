@@ -34,15 +34,10 @@ def handle_app_mention_events(body, say):
             upstage_key = os.getenv("UPSTAGE_API_KEY", "")
             nvidia_key = os.getenv("NVIDIA_API_KEY", "")
             
-            result_msg = "=========================================
- 🏥 *AI API Health & Latency Dashboard*
-=========================================
-
-"
+            result_msg = "=========================================\n 🏥 *AI API Health & Latency Dashboard*\n=========================================\n\n"
             
             # 1. NVIDIA Test
-            result_msg += "*[1] Testing NVIDIA NIM (Llama 3.2 11B)...*
-"
+            result_msg += "*[1] Testing NVIDIA NIM (Llama 3.2 11B)...*\n"
             start_time = time.time()
             try:
                 client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=6.0, max_retries=0)
@@ -52,18 +47,13 @@ def handle_app_mention_events(body, say):
                     max_tokens=10
                 )
                 latency = time.time() - start_time
-                result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Noisy Neighbor: SAFE
-
-"
+                result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Noisy Neighbor: SAFE\n\n"
             except Exception as e:
                 latency = time.time() - start_time
-                result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`
-
-"
+                result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`\n\n"
 
             # 2. Upstage Test
-            result_msg += "*[2] Testing Upstage (Solar Mini)...*
-"
+            result_msg += "*[2] Testing Upstage (Solar Mini)...*\n"
             start_time = time.time()
             try:
                 client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=upstage_key, timeout=10.0, max_retries=0)
@@ -73,12 +63,10 @@ def handle_app_mention_events(body, say):
                     max_tokens=10
                 )
                 latency = time.time() - start_time
-                result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s`
-"
+                result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s`\n"
             except Exception as e:
                 latency = time.time() - start_time
-                result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`
-"
+                result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`\n"
             
             say(result_msg)
         except Exception as e:
@@ -119,15 +107,10 @@ def handle_message_events(body, say):
             upstage_key = os.getenv("UPSTAGE_API_KEY", "")
             nvidia_key = os.getenv("NVIDIA_API_KEY", "")
             
-            result_msg = "=========================================
- 🏥 *AI API Health & Latency Dashboard*
-=========================================
-
-"
+            result_msg = "=========================================\n 🏥 *AI API Health & Latency Dashboard*\n=========================================\n\n"
             
             # 1. NVIDIA Test
-            result_msg += "*[1] Testing NVIDIA NIM (Llama 3.2 11B)...*
-"
+            result_msg += "*[1] Testing NVIDIA NIM (Llama 3.2 11B)...*\n"
             start_time = time.time()
             try:
                 client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=6.0, max_retries=0)
@@ -137,18 +120,13 @@ def handle_message_events(body, say):
                     max_tokens=10
                 )
                 latency = time.time() - start_time
-                result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Noisy Neighbor: SAFE
-
-"
+                result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Noisy Neighbor: SAFE\n\n"
             except Exception as e:
                 latency = time.time() - start_time
-                result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`
-
-"
+                result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`\n\n"
 
             # 2. Upstage Test
-            result_msg += "*[2] Testing Upstage (Solar Mini)...*
-"
+            result_msg += "*[2] Testing Upstage (Solar Mini)...*\n"
             start_time = time.time()
             try:
                 client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=upstage_key, timeout=10.0, max_retries=0)
@@ -158,12 +136,10 @@ def handle_message_events(body, say):
                     max_tokens=10
                 )
                 latency = time.time() - start_time
-                result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s`
-"
+                result_msg += f"> ✅ Status: `HEALTHY` | ⏱️ Latency: `{latency:.2f}s`\n"
             except Exception as e:
                 latency = time.time() - start_time
-                result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`
-"
+                result_msg += f"> ❌ Status: `UNHEALTHY` | ⏱️ Latency: `{latency:.2f}s` | Error: `{str(e)[:50]}...`\n"
             
             say(result_msg)
         except Exception as e:
