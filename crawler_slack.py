@@ -60,7 +60,18 @@ class SalesIntelligence:
     def get_best_target(self, target_list):
         print("[세일즈 인텔리전스] 대한민국 B2B 타깃 풀(60개 기업) 중 잠재력 상위 5개 후보군 추출 및 구글 트렌드 분석 중...")
         import random
-        candidates = random.sample(target_list, 5)
+        import database
+        
+        # 1. 중복 배제: 최근 10회 푸시된 타깃은 후보에서 제외
+        recent_records = database.get_recent_targets(limit=10)
+        recent_names = [r[0] for r in recent_records] if recent_records else []
+        fresh_targets = [t for t in target_list if t['company'] not in recent_names]
+        
+        # 만약 타깃이 너무 없으면 전체 타깃에서 롤백
+        if len(fresh_targets) < 5:
+            fresh_targets = target_list
+            
+        candidates = random.sample(fresh_targets, 5)
         
         best_target = candidates[0]
         trend_reason = "Google Trends 데이터 수집 예외 (대체 점수 반영)"
