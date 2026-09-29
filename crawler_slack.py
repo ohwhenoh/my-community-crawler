@@ -598,7 +598,7 @@ def generate_korean_outreach_report(return_target=False):
     )
 
     report_text += (
-        f"\n📝 *맞춤형 세일즈 아웃리치 제안서 국문 초안 (Sample Outreach Draft)*:\n"
+        f"\n📝 맞춤형 세일즈 아웃리치 제안서 국문 초안:\n"
         f"```\n"
         f"받는 이: [담당자 성함 귀하]\n"
         f"제목: [추천 제목 중 택일]\n\n"
@@ -606,9 +606,9 @@ def generate_korean_outreach_report(return_target=False):
         f"{outreach_body_injected}\n"
         f"```\n\n"
         f"{social_buzz_text}\n"
-        f"🎯 *[경쟁사 대비 F5 솔루션 제안 포인트 1: 비용절감 및 ROI 극대화]*\n"
+        f"🎯 [F5 제안 포인트 1: 비용절감 및 ROI 극대화]\n"
         f"{roi_content}\n\n"
-        f"🎯 *[경쟁사 대비 F5 솔루션 제안 포인트 2: 독보적 AI 보안 아키텍처]*\n"
+        f"🎯 [F5 제안 포인트 2: 독보적 AI 보안 아키텍처]\n"
         f"{tech_content}\n"
     )
 
