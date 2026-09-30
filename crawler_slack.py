@@ -639,12 +639,8 @@ def send_to_slack(message, target_company="타깃 기업"):
     
     blocks = []
     
-    # We will split the message by "
-
-" and decide block type
-    paragraphs = message.split('
-
-')
+    # We will split the message by "\n\n" and decide block type
+    paragraphs = message.split("\n\n")
     
     for p in paragraphs:
         p = p.strip()
