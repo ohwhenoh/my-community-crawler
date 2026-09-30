@@ -308,7 +308,19 @@ def get_macro_economic_data():
         fx_text += "• :large_yellow_circle: 유로존 금리 변동: :flag-eu: '독일 제조업 PMI 부진 및 유럽중앙은행(ECB) 추가 금리 인하 지연 우려' - 유럽 1위 공업국인 독일의 침체 여파로 글로벌 IT 벤더들의 매출 타격이 예상됨 (실제로 주요 고객사들의 인프라 투자 결정을 1~2분기 미루고 있는 상황). 이럴 때일수록 '예산 감축'을 방어하는 논리보다, 분산된 보안 장비(WAF, Bot, API)를 F5 단일 플랫폼으로 통합하여 **'TCO(총소유비용)를 30% 즉각 절감'** 할 수 있다는 명확한 수치적 가치를 제시해야 함.\n"
         fx_text += "• :red_circle: 환율 리스크: 강달러 지속 (외산 솔루션 도입 부담 증가 :arrow_right: ROI/비용절감 가치 강조 필수)\n\n"
 
-        rates = {'US': 4.98, 'CN': 3.45, 'KR': 3.50, 'JP': 0.10, 'MY': 3.00, 'EU': 4.50}
+
+        # Try to fetch real US 10Y yield from Yahoo (^TNX)
+        us_yield = 4.98 # fallback
+        try:
+            curr_tnx, _, _, _, _ = get_yahoo_price('^TNX')
+            if curr_tnx: us_yield = curr_tnx
+        except:
+            pass
+            
+        # Due to free API limits, other countries' yields use static fallback. 
+        # In a real enterprise app, we'd use FRED or Bloomberg API.
+        rates = {'US': us_yield, 'CN': 2.30, 'KR': 3.10, 'JP': 0.80, 'MY': 3.80, 'EU': 2.40}
+
         pairs = {
             ':cn: 중국 위안화': ('CN', 'USDCNY=X'),
             ':kr: 한국 원화': ('KR', 'USDKRW=X'),

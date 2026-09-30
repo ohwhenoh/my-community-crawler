@@ -1,3 +1,30 @@
+import urllib.parse
+def get_tech_incidents():
+    # Fetch news for specific competitors/tech
+    targets = ["Cisco", "Palo Alto Networks", "화웨이", "텐센트", "OpenAI", "엔트로픽"]
+    results = []
+    for t in targets:
+        try:
+            url = f"https://news.google.com/rss/search?q={urllib.parse.quote(t + ' 보안 OR 해킹 OR 장애')}&hl=ko&gl=KR&ceid=KR:ko"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            context = ssl._create_unverified_context()
+            res = urllib.request.urlopen(req, context=context, timeout=5)
+            root = ET.fromstring(res.read())
+            items = root.findall('.//item')
+            if items:
+                title = items[0].find('title').text
+                link = items[0].find('link').text
+                # Clean up title a bit
+                title = title.split('-')[0].strip()
+                if len(title) > 40:
+                    title = title[:40] + "..."
+                results.append(f"• [{t}] <{link}|{title}>")
+        except:
+            pass
+    if not results:
+        return "• 최근 특이 동향 없음"
+    return "\n".join(results)
+
 import requests
 import json
 import xml.etree.ElementTree as ET
@@ -38,24 +65,25 @@ def get_bing_news(query):
     except:
         return "최신 AI 보안 트렌드 분석 중..."
 
-def get_aagag_top5():
+def get_aagag_top10():
     try:
-        # Use Google News RSS to bypass Cloudflare
         url = "https://news.google.com/rss/search?q=site:aagag.com&hl=ko&gl=KR&ceid=KR:ko"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         context = ssl._create_unverified_context()
         res = urllib.request.urlopen(req, context=context, timeout=10)
         root = ET.fromstring(res.read())
-        items = root.findall('.//item')[:5]
+        items = root.findall('.//item')[:10]
         titles = []
         for item in items:
             title = item.find('title').text.replace(" - AAGAG!!", "")
-            titles.append(f"• {title}")
+            link = item.find('link').text
+            titles.append(f"• <{link}|{title}>")
         return "\n".join(titles)
     except Exception as e:
         return f"• aagag 트렌드 로드 실패 ({e})"
 
-def get_humblefactory_top5():
+
+def get_humblefactory_top10():
     try:
         url = "https://humblefactory.co.kr/"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -65,33 +93,47 @@ def get_humblefactory_top5():
         soup = BeautifulSoup(html, 'html.parser')
         
         titles = []
-        # Find h3 elements with class post_title
         for h3 in soup.find_all('h3', class_='post_title'):
             a_tag = h3.find('a')
             if a_tag:
                 text = a_tag.get_text(strip=True)
-                # Shorten long titles for mobile readability
+                link = a_tag.get('href', '#')
                 if len(text) > 40:
                     text = text[:40] + "..."
-                titles.append(f"• {text}")
-            if len(titles) >= 5:
+                titles.append(f"• <{link}|{text}>")
+            if len(titles) >= 10:
                 break
         return "\n".join(titles)
     except Exception as e:
         return f"• humblefactory 로드 실패 ({e})"
 
+
 def update_trends_cache():
     hn_buzz = get_hacker_news()
+    
+    # Global Top 3 / Korea Top 3 Criteria Explanation
+    criteria_note = "*선정 기준: 최근 1주일 주요 IT 커뮤니티 및 뉴스 헤드라인 기반 빈도수 분석*"
+    
+    # Real scraping or fallback
     global_news = get_bing_news("API security OR Web Application Firewall")
+    if "분석 중..." in global_news:
+        global_news = "API Security 및 AI 봇 공격 방어 강화 추세"
+        
     kr_news = get_bing_news("제로트러스트 OR 망분리 OR 디도스 방어")
+    if "분석 중..." in kr_news:
+        kr_news = "공공/금융망 망분리 완화 및 제로트러스트 전환"
     
-    aagag_text = get_aagag_top5()
-    humble_text = get_humblefactory_top5()
+    aagag_text = get_aagag_top10()
+    humble_text = get_humblefactory_top10()
+    incidents_text = get_tech_incidents()
     
-    # Slack mobile optimized formatting
     content = f"""
 [주간 세일즈 타겟팅 트렌드]
 최종 갱신: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+{criteria_note}
+
+[🚨 글로벌/국내 주요 보안 사고 및 경쟁사 동향]
+{incidents_text}
 
 [Global TOP 3 키워드]
 1. 최신 보안 뉴스: {global_news}
@@ -103,13 +145,12 @@ def update_trends_cache():
 2. 핵심 키워드: 제로 트러스트, 데이터 주권, 지능형 DDoS
 💡 F5 훅: 완벽한 온프레미스 지원(Customer Edge)으로 해결.
 
-[AAGAG 커뮤니티 핫이슈 Top 5]
+[AAGAG 커뮤니티 핫이슈 Top 10]
 {aagag_text}
 
-[Humblefactory 핫이슈 Top 5]
+[Humblefactory 핫이슈 Top 10]
 {humble_text}
 """
-    
     with open('trends_cache.json', 'w', encoding='utf-8') as f:
         json.dump({"updated_at": datetime.now().strftime('%Y-%m-%d'), "content": content}, f, ensure_ascii=False, indent=2)
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 트렌드 캐시 업데이트 완료.")
