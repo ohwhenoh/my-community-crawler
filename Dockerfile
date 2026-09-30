@@ -24,19 +24,10 @@ RUN playwright install --with-deps chromium
 
 
 # Copy application source files
-COPY app.py .
-COPY crawler_slack.py .
-COPY scheduler_daemon.py .
-COPY email_reporter.py .
+COPY *.py .
 
-COPY bot_daemon.py .
-COPY ai_tailor.py .
-COPY api_health_check.py .
-COPY database.py .
-COPY scraper_engine.py .
 COPY targets.json .
 COPY trends_cache.json .
-COPY trend_updater.py .
 COPY templates/ templates/
 
 # Note: .env is not copied during build to maintain secret isolation.
