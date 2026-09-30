@@ -638,6 +638,74 @@ def send_to_slack(message, target_company="타깃 기업"):
     company_query = urllib.parse.quote(target_company)
     
     blocks = []
+    
+    # We will split the message by "
+
+" and decide block type
+    paragraphs = message.split('
+
+')
+    
+    for p in paragraphs:
+        p = p.strip()
+        if not p: continue
+        
+        # If paragraph is related to Trends/AAGAG/Humblefactory, use context block (max 2000 chars per element, we split if needed)
+        is_trend = ("주간 세일즈 타겟팅" in p or "AAGAG" in p or "Humblefactory" in p or "Global TOP 3" in p or "Korea TOP 3" in p)
+        
+        if is_trend:
+            # Chunk it into 2000 char pieces to avoid Slack API limits for context blocks
+            chunks = [p[i:i+2000] for i in range(0, len(p), 2000)]
+            for chunk in chunks:
+                blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": chunk}]})
+        else:
+            # Normal section block, max 3000 chars
+            chunks = [p[i:i+3000] for i in range(0, len(p), 3000)]
+            for chunk in chunks:
+                blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": chunk}})
+                
+    blocks.append({
+        "type": "actions",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"🎯 {target_company} 세일즈 룸 바로가기",
+                    "emoji": True
+                },
+                "url": f"https://www.google.com/search?q={company_query}+기업정보"
+            }
+        ]
+    })
+        
+    payload = {"text": "F5 세일즈 리포트 도착", "blocks": blocks}
+    data = json.dumps(payload).encode('utf-8')
+    
+    try:
+        req = urllib.request.Request(
+            SLACK_WEBHOOK_URL,
+            data=data,
+            headers={'Content-Type': 'application/json'}
+        )
+        with urllib.request.urlopen(req, timeout=12) as response:
+            if response.status in (200, 201):
+                print(f"[{target_company}] Slack 메시지 전송 성공!")
+                return True
+            else:
+                print(f"Slack 메시지 전송 실패: {response.status}")
+    except Exception as e:
+        print(f"Slack 메시지 전송 중 예외 발생: {e}")
+        
+    return False
+        
+    import urllib.parse
+    import json
+    import urllib.request
+    
+    company_query = urllib.parse.quote(target_company)
+    
+    blocks = []
     # Split using literal \n characters
     paragraphs = message.split('\n\n')
     current_text = ""
