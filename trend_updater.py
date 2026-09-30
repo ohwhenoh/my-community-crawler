@@ -1,7 +1,7 @@
 import urllib.parse
 def get_tech_incidents():
     # Fetch news for specific competitors/tech
-    targets = ["Cisco", "Palo Alto Networks", "화웨이", "텐센트", "OpenAI", "엔트로픽"]
+    targets = ["Cisco", "Palo Alto Networks", "화웨이", "텐센트", "OpenAI", "엔트로픽", "스테이블 코인", "지니어스 법안"]
     results = []
     for t in targets:
         try:
@@ -108,52 +108,77 @@ def get_humblefactory_top10():
         return f"• humblefactory 로드 실패 ({e})"
 
 
+
 def update_trends_cache():
+    global_titles = []
     hn_buzz = get_hacker_news()
-    
-    # Global Top 3 / Korea Top 3 Criteria Explanation
-    criteria_note = "*선정 기준: 최근 1주일 주요 IT 커뮤니티 및 뉴스 헤드라인 기반 빈도수 분석*"
-    
-    # Real scraping or fallback
-    global_news = get_bing_news("API security OR Web Application Firewall")
-    if "분석 중..." in global_news:
-        global_news = "API Security 및 AI 봇 공격 방어 강화 추세"
+    if hn_buzz.startswith("글로벌 핫토픽: "):
+        global_titles.extend(hn_buzz.replace("글로벌 핫토픽: ", "").split(", "))
         
-    kr_news = get_bing_news("제로트러스트 OR 망분리 OR 디도스 방어")
-    if "분석 중..." in kr_news:
-        kr_news = "공공/금융망 망분리 완화 및 제로트러스트 전환"
+    global_news = get_bing_news("API security OR Web Application Firewall")
+    if "분석 중..." not in global_news:
+        global_titles.append(global_news)
+        
+    global_words = []
+    for t in global_titles:
+        words = re.findall(r'\b[A-Za-z]{4,}\b', t.lower())
+        stopwords = {'that', 'with', 'from', 'this', 'have', 'about'}
+        global_words.extend([w for w in words if w not in stopwords])
     
+    global_top3 = [w[0] for w in Counter(global_words).most_common(3)]
+    if not global_top3:
+        global_top3 = ["API", "LLM", "Cloud"]
+    
+    global_top3_formatted = "\n".join([f"{i+1}. *{k}* (관련 뉴스 및 커뮤니티에서 가장 많이 언급됨)" for i, k in enumerate(global_top3)])
+
+    kr_titles = []
+    kr_news = get_bing_news("제로트러스트 OR 망분리 OR 디도스 방어")
+    if "분석 중..." not in kr_news:
+        kr_titles.append(kr_news)
+        
     aagag_text = get_aagag_top10()
     humble_text = get_humblefactory_top10()
-    incidents_text = get_tech_incidents()
     
-    content = f"""
-[주간 세일즈 타겟팅 트렌드]
-최종 갱신: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+    kr_titles.extend(re.findall(r'\|([^>]+)>', aagag_text))
+    kr_titles.extend(re.findall(r'\|([^>]+)>', humble_text))
+    
+    kr_words = []
+    for t in kr_titles:
+        words = re.findall(r'[가-힣]{2,}', t)
+        kr_words.extend(words)
+        
+    kr_top3 = [w[0] for w in Counter(kr_words).most_common(3)]
+    if not kr_top3:
+        kr_top3 = ["제로트러스트", "데이터주권", "AI보안"]
+        
+    kr_top3_formatted = "\n".join([f"{i+1}. *{k}* (국내 주요 IT 헤드라인에서 가장 많이 언급됨)" for i, k in enumerate(kr_top3)])
+
+    incidents_text = get_tech_incidents()
+    criteria_note = "_*선정 기준: 최근 1주일 주요 IT 커뮤니티 및 뉴스 헤드라인 기반 단순 단어 빈도 추출*_"
+    
+    content = f"""*📊 주간 세일즈 타겟팅 트렌드*
+_최종 갱신: {datetime.now().strftime('%Y-%m-%d %H:%M')}_
 {criteria_note}
 
-[🚨 글로벌/국내 주요 보안 사고 및 경쟁사 동향]
+*🚨 글로벌/국내 주요 보안 사고 및 경쟁사 동향*
 {incidents_text}
 
-[Global TOP 3 키워드]
-1. 최신 보안 뉴스: {global_news}
-2. 해커뉴스 Buzz: {hn_buzz}
-💡 F5 훅: 글로벌 최신 위협, 엣지에서 원천 차단.
+*🌍 Global TOP 3 키워드*
+{global_top3_formatted}
+💡 *F5 훅*: 글로벌 최신 위협, 엣지에서 원천 차단.
 
-[Korea TOP 3 키워드]
-1. 국내 보안 이슈: {kr_news}
-2. 핵심 키워드: 제로 트러스트, 데이터 주권, 지능형 DDoS
-💡 F5 훅: 완벽한 온프레미스 지원(Customer Edge)으로 해결.
+*🇰🇷 Korea TOP 3 키워드*
+{kr_top3_formatted}
+💡 *F5 훅*: 완벽한 온프레미스 지원(Customer Edge)으로 해결.
 
-[AAGAG 커뮤니티 핫이슈 Top 10]
+*🔥 AAGAG 커뮤니티 핫이슈 Top 10*
 {aagag_text}
 
-[Humblefactory 핫이슈 Top 10]
+*💻 Humblefactory 핫이슈 Top 10*
 {humble_text}
 """
     with open('trends_cache.json', 'w', encoding='utf-8') as f:
         json.dump({"updated_at": datetime.now().strftime('%Y-%m-%d'), "content": content}, f, ensure_ascii=False, indent=2)
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 트렌드 캐시 업데이트 완료.")
-
 if __name__ == "__main__":
     update_trends_cache()

@@ -428,7 +428,7 @@ def get_macro_economic_data():
         if usd_krw_curr and usd_jpy_curr:
             jpy_krw = usd_krw_curr / usd_jpy_curr
             if jpy_krw > 8.7:
-                jpy_krw_alert = f"🚨 *[긴급 환율 얼럿] 엔화 강세! 1 JPY = {jpy_krw:.2f} KRW 돌파 (일본 벤더 가격 방어 논리 준비 요망)*\n\n"
+                jpy_krw_alert = f"🚨 *[긴급 환율 얼럿]* 1 JPY = {jpy_krw:.2f} KRW 돌파! 일본 벤더사 단가 협상... 바로 '지금'입니다!\n\n"
             else:
                 jpy_krw_alert = f"💡 *[참고] 현재 엔화 환율: 1 JPY = {jpy_krw:.2f} KRW*\n\n"
     except:
