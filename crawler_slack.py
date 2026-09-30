@@ -597,6 +597,13 @@ def generate_korean_outreach_report(return_target=False):
         f"{tech_content}\n"
     )
 
+# Update Weekly Trends Cache before loading
+    try:
+        from trend_updater import update_trends_cache
+        update_trends_cache()
+    except Exception as e:
+        print(f"트렌드 업데이트 에러: {e}")
+
     # Load Weekly Trends Cache
     try:
         import json
