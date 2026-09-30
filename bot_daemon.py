@@ -60,7 +60,7 @@ def run_health_check(say, user):
         say(f"❌ 헬스체크 중 오류가 발생했습니다: {str(e)}")
 
 def run_target_analysis(say, user):
-    say(
+    loading_msg = say(
         text=f"<@{user}>님, 명령을 수신했습니다. 타깃을 심층 분석하여 즉시 리포트를 생성하겠습니다! ⏳ (약 10초 소요)",
         blocks=[
             {
@@ -77,12 +77,42 @@ def run_target_analysis(say, user):
             }
         ]
     )
+    
     try:
         import crawler_slack
         report, target_company = crawler_slack.generate_korean_outreach_report(return_target=True)
         crawler_slack.send_to_slack(report, target_company)
+        
+        # Update the loading message to indicate completion
+        app.client.chat_update(
+            channel=loading_msg["channel"],
+            ts=loading_msg["ts"],
+            text="분석 완료!",
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"✅ <@{user}>님, 타깃 심층 분석이 완료되어 아래에 리포트를 전송했습니다!"
+                    }
+                }
+            ]
+        )
     except Exception as e:
-        say(f"❌ 분석 중 오류가 발생했습니다: {str(e)}")
+        app.client.chat_update(
+            channel=loading_msg["channel"],
+            ts=loading_msg["ts"],
+            text="분석 중 오류 발생",
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"❌ 분석 중 오류가 발생했습니다: {str(e)}"
+                    }
+                }
+            ]
+        )
 
 def chat_with_llm(say, user, text):
     nvidia_key = os.getenv("NVIDIA_API_KEY", "")
