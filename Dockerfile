@@ -36,6 +36,7 @@ COPY database.py .
 COPY scraper_engine.py .
 COPY targets.json .
 COPY trends_cache.json .
+COPY trend_updater.py .
 COPY templates/ templates/
 
 # Note: .env is not copied during build to maintain secret isolation.
