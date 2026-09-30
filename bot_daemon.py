@@ -1,5 +1,6 @@
 import os
 import time
+import subprocess
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from openai import OpenAI
@@ -180,6 +181,142 @@ def handle_message_events(body, say):
             run_target_analysis(say, user)
         else:
             chat_with_llm(say, user, text)
+
+
+@app.event("app_home_opened")
+def update_home_tab(client, event, logger):
+    try:
+        # Call views.publish with the built-in client
+        client.views_publish(
+            user_id=event["user"],
+            view={
+                "type": "home",
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "🎛️ MacPro DR Bot 관제 센터"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*환영합니다, 마스터.*\n이곳에서 타자 칠 필요 없이 원클릭으로 봇을 통제하십시오."
+                        }
+                    },
+                    {
+                        "type": "divider"
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "🚀 즉시 리포트 생성"
+                                },
+                                "style": "primary",
+                                "action_id": "action_generate_report"
+                            },
+                            {
+                                "type": "button",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "🚑 긴급 데이터 롤백"
+                                },
+                                "style": "danger",
+                                "action_id": "action_rollback_data"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "mrkdwn",
+                                "text": "💡 _'긴급 데이터 롤백' 클릭 시 어젯밤 자정의 백업본으로 덮어씌워지고 컨테이너가 재시작됩니다._"
+                            }
+                        ]
+                    }
+                ]
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error publishing home tab: {e}")
+
+@app.action("action_generate_report")
+def handle_generate_report(ack, body, client):
+    ack()
+    user_id = body["user"]["id"]
+    client.chat_postMessage(
+        channel=user_id,
+        text="명령을 접수했습니다. 실시간 트렌드 및 타깃 분석을 시작합니다. 약 1분 정도 소요됩니다..."
+    )
+    
+    try:
+        import crawler_slack
+        # Execute the crawler logic
+        report, target_company = crawler_slack.generate_korean_outreach_report(return_target=True)
+        # We send to the user's DM instead of the general channel for this on-demand request, or the general channel? 
+        # The existing send_to_slack uses a webhook. For DM, let's just use chat_postMessage.
+        # Actually, crawler_slack.send_to_slack() sends it to the channel configured in webhook. Let's do that.
+        crawler_slack.send_to_slack(report, target_company)
+        client.chat_postMessage(
+            channel=user_id,
+            text="✅ 성공적으로 리포트를 생성하여 채널에 발송했습니다."
+        )
+    except Exception as e:
+        client.chat_postMessage(
+            channel=user_id,
+            text=f"❌ 리포트 생성 중 에러가 발생했습니다: {str(e)}"
+        )
+
+@app.action("action_rollback_data")
+def handle_rollback_data(ack, body, client):
+    ack()
+    user_id = body["user"]["id"]
+    client.chat_postMessage(
+        channel=user_id,
+        text="🚑 긴급 복구 프로토콜을 가동합니다. 어젯밤 자정 백업본으로 덮어씌운 후 컨테이너를 스스로 재시작합니다..."
+    )
+    
+    import subprocess
+    try:
+        # In a docker environment, this script runs inside the container. 
+        # Rolling back data means we extract the latest backup from /app/backups to /app/data
+        # Actually, let's trigger a script that does this.
+        # Since we are inside the container, we can't do `docker compose down`.
+        # But we CAN extract the tar.gz directly into /app/data.
+        import os
+        import glob
+        import tarfile
+        
+        backup_files = glob.glob('/app/backups/data_backup_*.tar.gz')
+        if not backup_files:
+            # Maybe local testing? check local path
+            backup_files = glob.glob('./backups/data_backup_*.tar.gz')
+            
+        if not backup_files:
+            client.chat_postMessage(channel=user_id, text="❌ 백업 파일이 존재하지 않아 복구를 취소합니다.")
+            return
+            
+        latest_backup = max(backup_files, key=os.path.getctime)
+        
+        client.chat_postMessage(channel=user_id, text=f"📦 가장 최신 백업 파일을 찾았습니다: {os.path.basename(latest_backup)}\n압축 해제를 시작합니다...")
+        
+        # We overwrite /app/data
+        # The tarball contains 'data/...'
+        with tarfile.open(latest_backup, "r:gz") as tar:
+            # We extract it to /app (or ./) so that it overwrites data/
+            extract_path = '/app' if os.path.exists('/app') else '.'
+            tar.extractall(path=extract_path)
+            
+        client.chat_postMessage(channel=user_id, text="✅ 데이터 롤백 완료. 시스템이 정상화되었습니다.")
+    except Exception as e:
+        client.chat_postMessage(channel=user_id, text=f"❌ 복구 중 에러가 발생했습니다: {str(e)}")
 
 if __name__ == "__main__":
     print("🚀 [Slack Bot] 양방향 Socket Mode 리스너 구동 시작...")
