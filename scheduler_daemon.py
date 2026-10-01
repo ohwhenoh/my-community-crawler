@@ -62,12 +62,12 @@ if __name__ == "__main__":
     
     if is_dr:
         print("🔧 [DR 모드] 라즈베리파이 백업 노드로 기동되었습니다. 정각 3분 뒤에 중복 검사를 시작합니다.", flush=True)
-        trigger_times = ["08:43", "10:53", "15:33"]
+        trigger_times = ["07:33", "10:53", "15:33"]
         email_trigger_time = "09:03"
         backup_trigger_time = "00:03"
     else:
         print("💻 [Primary 모드] 맥프로 메인 노드로 기동되었습니다.", flush=True)
-        trigger_times = ["08:40", "10:50", "15:30"]
+        trigger_times = ["07:30", "10:50", "15:30"]
         email_trigger_time = "09:00"
         backup_trigger_time = "00:00"
 
