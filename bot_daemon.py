@@ -225,10 +225,19 @@ def update_home_tab(client, event, logger):
                                 "type": "button",
                                 "text": {
                                     "type": "plain_text",
-                                    "text": "🚑 긴급 데이터 롤백"
+                                    "text": "🚑 롤백 (최신 백업)"
                                 },
                                 "style": "danger",
-                                "action_id": "action_rollback_data"
+                                "action_id": "action_rollback_latest"
+                            },
+                            {
+                                "type": "button",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "🚑 롤백 (가장 오래된 백업)"
+                                },
+                                "style": "danger",
+                                "action_id": "action_rollback_oldest"
                             },
                             {
                                 "type": "button",
@@ -245,7 +254,7 @@ def update_home_tab(client, event, logger):
                         "elements": [
                             {
                                 "type": "mrkdwn",
-                                "text": "💡 _'긴급 데이터 롤백' 클릭 시 어젯밤 자정의 백업본으로 덮어씌워지고 컨테이너가 재시작됩니다._"
+                                "text": "💡 _롤백 버튼 클릭 시 지정된 백업본(최신 또는 최대 7일 전)으로 DB를 덮어씌웁니다._"
                             }
                         ]
                     }
@@ -282,49 +291,49 @@ def handle_generate_report(ack, body, client):
             text=f"❌ 리포트 생성 중 에러가 발생했습니다: {str(e)}"
         )
 
-@app.action("action_rollback_data")
-def handle_rollback_data(ack, body, client):
+def execute_rollback(ack, body, client, mode="latest"):
     ack()
     user_id = body["user"]["id"]
+    mode_text = "최신(어제)" if mode == "latest" else "가장 오래된(최대 7일 전)"
     client.chat_postMessage(
         channel=user_id,
-        text="🚑 긴급 복구 프로토콜을 가동합니다. 어젯밤 자정 백업본으로 덮어씌운 후 컨테이너를 스스로 재시작합니다..."
+        text=f"🚑 긴급 복구 프로토콜을 가동합니다. {mode_text} 백업본으로 덮어씌웁니다..."
     )
     
-    import subprocess
+    import os
+    import glob
+    import tarfile
     try:
-        # In a docker environment, this script runs inside the container. 
-        # Rolling back data means we extract the latest backup from /app/backups to /app/data
-        # Actually, let's trigger a script that does this.
-        # Since we are inside the container, we can't do `docker compose down`.
-        # But we CAN extract the tar.gz directly into /app/data.
-        import os
-        import glob
-        import tarfile
-        
         backup_files = glob.glob('/app/backups/data_backup_*.tar.gz')
         if not backup_files:
-            # Maybe local testing? check local path
             backup_files = glob.glob('./backups/data_backup_*.tar.gz')
             
         if not backup_files:
             client.chat_postMessage(channel=user_id, text="❌ 백업 파일이 존재하지 않아 복구를 취소합니다.")
             return
             
-        latest_backup = max(backup_files, key=os.path.getctime)
+        if mode == "latest":
+            target_backup = max(backup_files, key=os.path.getctime)
+        else:
+            target_backup = min(backup_files, key=os.path.getctime)
+            
+        client.chat_postMessage(channel=user_id, text=f"📦 타깃 백업 파일을 찾았습니다: {os.path.basename(target_backup)}\n압축 해제를 시작합니다...")
         
-        client.chat_postMessage(channel=user_id, text=f"📦 가장 최신 백업 파일을 찾았습니다: {os.path.basename(latest_backup)}\n압축 해제를 시작합니다...")
-        
-        # We overwrite /app/data
-        # The tarball contains 'data/...'
-        with tarfile.open(latest_backup, "r:gz") as tar:
-            # We extract it to /app (or ./) so that it overwrites data/
+        with tarfile.open(target_backup, "r:gz") as tar:
             extract_path = '/app' if os.path.exists('/app') else '.'
             tar.extractall(path=extract_path)
             
         client.chat_postMessage(channel=user_id, text="✅ 데이터 롤백 완료. 시스템이 정상화되었습니다.")
     except Exception as e:
         client.chat_postMessage(channel=user_id, text=f"❌ 복구 중 에러가 발생했습니다: {str(e)}")
+
+@app.action("action_rollback_latest")
+def handle_rollback_latest(ack, body, client):
+    execute_rollback(ack, body, client, mode="latest")
+
+@app.action("action_rollback_oldest")
+def handle_rollback_oldest(ack, body, client):
+    execute_rollback(ack, body, client, mode="oldest")
 
 
 @app.action("action_heal_system")
