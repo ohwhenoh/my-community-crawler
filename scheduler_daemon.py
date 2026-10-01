@@ -4,6 +4,14 @@ import sys
 import backup_manager
 from datetime import datetime
 
+
+def run_haerang_job():
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 해랑 열차 12월 예약 크롤링 기동...", flush=True)
+    try:
+        subprocess.run([sys.executable, "crawler_haerang.py"], check=False)
+    except Exception as e:
+        print(f"해랑 열차 크롤러 에러: {e}", flush=True)
+
 def run_scraper_job():
     """
     Executes crawler_slack.py as a subprocess and logs output.
