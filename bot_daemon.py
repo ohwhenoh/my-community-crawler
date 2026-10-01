@@ -229,6 +229,14 @@ def update_home_tab(client, event, logger):
                                 },
                                 "style": "danger",
                                 "action_id": "action_rollback_data"
+                            },
+                            {
+                                "type": "button",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "🛠️ 시스템 강제 정상화 (Healing)"
+                                },
+                                "action_id": "action_heal_system"
                             }
                         ]
                     },
@@ -317,6 +325,28 @@ def handle_rollback_data(ack, body, client):
         client.chat_postMessage(channel=user_id, text="✅ 데이터 롤백 완료. 시스템이 정상화되었습니다.")
     except Exception as e:
         client.chat_postMessage(channel=user_id, text=f"❌ 복구 중 에러가 발생했습니다: {str(e)}")
+
+
+@app.action("action_heal_system")
+def handle_heal_system(ack, body, client):
+    ack()
+    user_id = body["user"]["id"]
+    client.chat_postMessage(
+        channel=user_id,
+        text="🛠️ 인프라 강제 정상화 프로토콜을 가동합니다. 컨테이너가 스스로를 재기동합니다..."
+    )
+    
+    import subprocess
+    import os
+    try:
+        # Since we are inside the container, we can't easily docker compose down the host.
+        # However, we can simply force exit the python process, which will cause the container to stop.
+        # Docker compose or Watchtower (with restart: unless-stopped) will bring it back up.
+        # Or, just touch a restart file. We will exit with a specific message.
+        client.chat_postMessage(channel=user_id, text="✅ 봇 데몬 프로세스를 강제로 자결시킵니다. 1분 뒤 도커 엔진에 의해 새 생명으로 부활합니다.")
+        os._exit(1)
+    except Exception as e:
+        client.chat_postMessage(channel=user_id, text=f"❌ 시스템 강제 종료 실패: {str(e)}")
 
 if __name__ == "__main__":
     print("🚀 [Slack Bot] 양방향 Socket Mode 리스너 구동 시작...")
