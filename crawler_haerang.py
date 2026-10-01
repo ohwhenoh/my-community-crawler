@@ -39,7 +39,9 @@ def check_haerang():
         found = False
         target_text = ""
         for line in lines:
-            if "2026년 12월 예약" in line or "12월 예약오픈" in line or "12월 예약 오픈" in line:
+            # 정규식(Regex): '12월'과 '예약' 사이에 띄어쓰기가 몇 개든, 다른 글자(추가 상품 등)가 끼어있든 모두 잡아냅니다.
+            # 예: 12월예약, 12월 예약, 12월 추가 상품 및 예약
+            if re.search(r"12월.*?예약", line):
                 found = True
                 target_text = line
                 break
