@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 DATA_DIR = "./data"
 BACKUP_DIR = "./backups"
-RETENTION_DAYS = 180  # 6 months
+RETENTION_DAYS = 7  # 1 week
 
 def create_backup():
     if not os.path.exists(BACKUP_DIR):
