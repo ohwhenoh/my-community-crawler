@@ -44,4 +44,4 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/.docker/config.json:/config.json:ro
-    command: --interval 300 --cleanup
+    command: ["--interval", "300", "--cleanup", "task_board_scheduler", "task_board_bot"]
