@@ -614,9 +614,92 @@ def generate_korean_outreach_report(return_target=False):
     except Exception as e:
         print(f"주간 트렌드 캐시 로드 에러: {e}")
 
+
+    # --- 키워드 강조 처리 (환율, 금리, 보안) ---
+    report_text = report_text.replace("환율", "💸 *환율*")
+    report_text = report_text.replace("금리", "📈 *금리*")
+    report_text = report_text.replace("보안", "🛡️ *보안*")
+    
+    # --- 민들레뉴스 Top 10 및 구글 트렌드 추가 ---
+    try:
+        import urllib.request
+        from bs4 import BeautifulSoup
+        import xml.etree.ElementTree as ET
+        import ssl
+        
+        extra_content = "\n\n🌐 *[추가 이슈 트래킹 (Google Trends & Mindle News)]*\n\n"
+        
+        # 1. 민들레뉴스 많이 본 기사 Top 10
+        try:
+            url = "https://www.mindlenews.com"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            context = ssl._create_unverified_context()
+            res = urllib.request.urlopen(req, context=context, timeout=10)
+            soup = BeautifulSoup(res.read().decode('utf-8'), 'html.parser')
+            
+            element = soup.find(string=lambda t: t and '많이 본 뉴스' in t)
+            if element:
+                parent_section = element.find_parent('div', class_='box-list') or element.find_parent('article') or element.find_parent('section') or element.find_parent('div', class_='list')
+                if not parent_section:
+                    parent_section = element.parent.parent.parent
+                
+                links = parent_section.find_all('a')
+                extra_content += "📰 *Mindle News (많이 본 기사 Top 10)*\n"
+                count = 0
+                for a in links:
+                    title = a.text.strip()
+                    href = a.get('href')
+                    if title and href:
+                        if not href.startswith('http'):
+                            href = "https://www.mindlenews.com" + href
+                        extra_content += f"• <{href}|{title}>\n"
+                        count += 1
+                    if count >= 10:
+                        break
+            extra_content += "\n"
+        except Exception as e:
+            extra_content += f"• 민들레뉴스 로드 실패 ({e})\n\n"
+
+        # 2. 구글 인기 검색어 (48시간) - RSS 활용
+        def fetch_google_trends(geo, name):
+            try:
+                url = f"https://trends.google.com/trending/rss?geo={geo}"
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                context = ssl._create_unverified_context()
+                res = urllib.request.urlopen(req, context=context, timeout=10)
+                root = ET.fromstring(res.read())
+                items = root.findall('.//item')[:5]
+                
+                output = [f"🔍 *Google 인기 검색어 ({name}, 48시간)*"]
+                for item in items:
+                    title = item.find('title').text
+                    ns = {'ht': 'https://trends.google.com/trending/rss'}
+                    news_item = item.find('ht:news_item', ns)
+                    if news_item is not None:
+                        news_url = news_item.find('ht:news_item_url', ns).text
+                        news_title = news_item.find('ht:news_item_title', ns).text
+                        if len(news_title) > 35:
+                            news_title = news_title[:32] + ".."
+                        output.append(f"• <{news_url}|{title} ({news_title})>")
+                    else:
+                        output.append(f"• {title}")
+                return "\n".join(output) + "\n\n"
+            except Exception as e:
+                return f"🔍 *Google 인기 검색어 ({name})* 로드 실패\n\n"
+
+        extra_content += fetch_google_trends("KR", "대한민국")
+        extra_content += fetch_google_trends("SG", "싱가포르")
+        extra_content += fetch_google_trends("US", "미국")
+        
+        report_text += extra_content
+        
+    except Exception as e:
+        print(f"추가 컨텐츠 로드 에러: {e}")
+
     if return_target:
         return report_text, target["company"]
     return report_text
+
 
 def send_to_slack(message, target_company="타깃 기업"):
     if not SLACK_WEBHOOK_URL or SLACK_WEBHOOK_URL == "YOUR_SLACK_WEBHOOK_URL_HERE":
