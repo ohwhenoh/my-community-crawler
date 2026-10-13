@@ -671,9 +671,12 @@ def generate_korean_outreach_report(return_target=False):
 
 
 def send_to_slack(message, target_company="타깃 기업"):
-    if not SLACK_WEBHOOK_URL or SLACK_WEBHOOK_URL == "YOUR_SLACK_WEBHOOK_URL_HERE":
-        print("알림: SLACK_WEBHOOK_URL이 구성되지 않았습니다.")
+    
+    webhook_url = os.environ.get("SLACK_WEBHOOK_RAW") or SLACK_WEBHOOK_URL
+    if not webhook_url or webhook_url == "YOUR_SLACK_WEBHOOK_URL_HERE":
+        print("알림: SLACK_WEBHOOK_RAW (또는 URL)이 구성되지 않았습니다.")
         return False
+
         
     import urllib.parse
     import json
@@ -797,6 +800,15 @@ if __name__ == "__main__":
             import sys
             sys.exit(0)
             
+
     report, target_comp = generate_korean_outreach_report(return_target=True)
     send_to_slack(report, target_comp)
+    
+    # Save to raw dump for the morning briefing caddie bot
+    import os
+    os.makedirs("data", exist_ok=True)
+    with open("data/raw_trends_dump.txt", "a", encoding="utf-8") as f:
+        f.write("\n\n=========================================\n")
+        f.write(report)
+
 

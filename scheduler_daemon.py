@@ -34,6 +34,18 @@ def run_scraper_job():
 
 
 
+
+def run_caddie_bot_job():
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 챔피언 캐디 봇: 51% 필터링 모닝/오후 브리핑 기동...", flush=True)
+    try:
+        res = subprocess.run([sys.executable, "caddie_bot.py"], capture_output=True, text=True)
+        if res.stdout:
+            print(f"--- 캐디봇 STDOUT ---\n{res.stdout.strip()}", flush=True)
+        if res.stderr:
+            print(f"--- 캐디봇 STDERR ---\n{res.stderr.strip()}", flush=True)
+    except Exception as e:
+        print(f"캐디 봇 에러: {e}", flush=True)
+
 def run_backup_job():
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 스케줄러: 일일 데이터 백업 기동 시작...", flush=True)
     try:
@@ -68,14 +80,19 @@ if __name__ == "__main__":
     import os
     is_dr = os.environ.get("IS_DR_NODE") == "True"
     
+    # Crawler runs periodically to feed the raw dump (e.g., every few hours)
+    crawler_trigger_times = ["01:00", "05:00", "09:00", "13:00", "15:00", "19:00"]
+    
     if is_dr:
-        print("🔧 [DR 모드] 라즈베리파이 백업 노드로 기동되었습니다. 정각 3분 뒤에 중복 검사를 시작합니다.", flush=True)
-        trigger_times = ["07:33", "10:53", "15:33"]
+        print("🔧 [DR 모드] 라즈베리파이 백업 노드로 기동되었습니다.", flush=True)
+        # SGT 07:25, 16:00. DR node adds 3 minutes.
+        caddie_trigger_times = ["07:28", "16:03"]
         email_trigger_time = "09:03"
         backup_trigger_time = "00:03"
     else:
         print("💻 [Primary 모드] 맥프로 메인 노드로 기동되었습니다.", flush=True)
-        trigger_times = ["07:30", "10:50", "15:30"]
+        # SGT 07:25, 16:00
+        caddie_trigger_times = ["07:25", "16:00"]
         email_trigger_time = "09:00"
         backup_trigger_time = "00:00"
 
@@ -102,11 +119,17 @@ if __name__ == "__main__":
                     run_email_job()
                     last_email_trigger_date = email_trigger_key
 
-            if current_time_str in trigger_times:
+            if current_time_str in crawler_trigger_times:
                 trigger_key = f"{current_date_str}_{current_time_str}"
                 if last_trigger_date != trigger_key:
                     run_scraper_job()
                     last_trigger_date = trigger_key
+
+            if current_time_str in caddie_trigger_times:
+                caddie_key = f"{current_date_str}_{current_time_str}"
+                if getattr(sys, "last_caddie_date", "") != caddie_key:
+                    run_caddie_bot_job()
+                    sys.last_caddie_date = caddie_key
                     
             # Sleep for 10 seconds to check time precisely without consuming excessive CPU
             time.sleep(10)
