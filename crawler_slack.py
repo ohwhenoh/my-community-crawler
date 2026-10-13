@@ -727,7 +727,7 @@ def send_to_slack(message, target_company="타깃 기업"):
     
     try:
         req = urllib.request.Request(
-            SLACK_WEBHOOK_URL,
+            webhook_url,
             data=data,
             headers={'Content-Type': 'application/json'}
         )
@@ -779,7 +779,7 @@ def send_to_slack(message, target_company="타깃 기업"):
     
     try:
         req = urllib.request.Request(
-            SLACK_WEBHOOK_URL,
+            webhook_url,
             data=data,
             headers={'Content-Type': 'application/json'}
         )
