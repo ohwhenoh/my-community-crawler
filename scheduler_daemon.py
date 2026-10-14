@@ -85,14 +85,14 @@ if __name__ == "__main__":
     
     if is_dr:
         print("🔧 [DR 모드] 라즈베리파이 백업 노드로 기동되었습니다.", flush=True)
-        # SGT 07:25, 16:00. DR node adds 3 minutes.
-        caddie_trigger_times = ["07:28", "16:03"]
+        # SGT 07:25, 16:00 -> KST 08:25, 17:00 -> KST 08:25, 17:00. DR node adds 3 minutes.
+        caddie_trigger_times = ["08:28", "17:03"]
         email_trigger_time = "09:03"
         backup_trigger_time = "00:03"
     else:
         print("💻 [Primary 모드] 맥프로 메인 노드로 기동되었습니다.", flush=True)
-        # SGT 07:25, 16:00
-        caddie_trigger_times = ["07:25", "16:00"]
+        # SGT 07:25, 16:00 -> KST 08:25, 17:00
+        caddie_trigger_times = ["08:25", "17:00"]
         email_trigger_time = "09:00"
         backup_trigger_time = "00:00"
 
