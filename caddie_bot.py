@@ -75,11 +75,23 @@ FILTER RULE - 51% Corner Rule:
 2. Only PASS if this trend has business actionability: Can I send this to a customer TODAY and add 1mm value?
 3. Only PASS if trend duration > 24 hours. (Reject short-term spikes like sports, celebs, politics, noise. Assume non-tech news is noise).
 
+WRITING RULE - The Apex Execution (Korean B2B Style):
+- Corner Entry (Start): Start with the customer's infrastructure bottleneck (e.g., external API attack surge, compliance risk). DO NOT mention "F5" yet.
+- Hit the Apex (Middle): Introduce "F5" subtly as the proven mechanism to solve the bottleneck.
+- Target Split (Action): Provide tailored hooks. One for CISO (focus on compliance/regulation & false positive cost). One for Ops Engineer (focus on patch management & incident response).
+- Soft Exit (End): Do not ask for a meeting. Provide a low-burden resource exit. (e.g., "우리가 대형 은행 적용할 때 썼던 하드닝 가이드 요약본입니다. 현업에 필요하실 때 클릭해서 쓰시고, 내부 검토 후 막히는 구간이 생기면 제게 연락 주십시오.")
+
 If nothing passed filter, write EXACTLY: 
 오늘은 코너 없음. 핸들 놓고 쉬세요.
 
 If PASS, output strictly in this format for UP TO 3 items:
-[51% INSIGHT] {{keyword}} | {{왜 중요한지 1줄}} | {{고객에게 할 1mm 액션 1줄}}
+[51% INSIGHT] {{keyword}}
+- 진입: {{인프라 병목 1줄}}
+- 무기: {{F5 솔루션 은근슬쩍 등장 1줄}}
+- 타깃 타격:
+  👉 CISO: {{규제/오탐 비용 방어 멘트 1줄}}
+  👉 Ops엔지니어: {{패치 주기/장애 대응 멘트 1줄}}
+- 출구: {{부담 없는 탈출구 멘트 (하드닝 가이드 등 링크 제안) 1줄}}
 
 Do not add any intro or outro text.
 Always end the response with this exact line:
