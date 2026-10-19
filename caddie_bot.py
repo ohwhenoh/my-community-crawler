@@ -82,6 +82,8 @@ WRITING RULE FOR APEX NEWS (The "Late Apex" Strategy):
   State the objective, heavy FACT of the news clearly and coolly. 
   You MUST include the Source and Date (if available) and format it as a Slack hyperlink if a URL is provided. 
   Format: "[출처, 날짜] <URL|객관적 팩트 요약>" (If no URL, just "[출처, 날짜] 객관적 팩트 요약")
+- 지역화 (Localization) 우선순위:
+  반드시 대한민국(South Korea)의 보안 사고, 공공/금융 규제, 기업 피해 사례를 최우선으로 탐색하여 맥락을 프레이밍하십시오. 국내 사례가 전혀 없을 경우에만 미국(US) 등 글로벌 사례로 넘어갑니다.
 - 질문 (Question):
   Generate 2 separate sharp, factual questions hitting the core pain points:
   1) CISO/보안팀 대상: (Focus on legal/compliance/business risk, responsibility transfer, "선량한 관리자의 의무")
