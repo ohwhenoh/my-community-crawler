@@ -60,8 +60,8 @@ def run_caddie_bot():
         raw_text = raw_text[-15000:]
         
 
-    key = os.getenv("UPSTAGE_API_KEY", "up_R94I2350T0dDYrf3w0qYFrlZxrzqC")
-    client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=key)
+    key = os.getenv("NVIDIA_API_KEY")
+    client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=key)
     
     prompt = f"""
 You are an IT Security / Infrastructure trend analyzer for B2B sales.
@@ -119,7 +119,7 @@ Output ONLY a valid JSON object. No markdown, no code blocks.
     
     try:
         response = client.chat.completions.create(
-            model="solar-1-mini-chat",
+            model="meta/llama-3.2-90b-vision-instruct",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1500,
             temperature=0.3
