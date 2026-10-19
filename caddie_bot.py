@@ -2,7 +2,7 @@ import os
 import json
 import urllib.request
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from openai import OpenAI
 
 def load_env():
@@ -16,25 +16,20 @@ def load_env():
                     key, val = line.split("=", 1)
                     os.environ[key.strip()] = val.strip().strip("'\"")
 
-def send_to_morning_briefing(message):
-    webhook_url = os.environ.get("SLACK_WEBHOOK_MORNING", __import__("base64").b64decode("aHR0cHM6Ly9ob29rcy5zbGFjay5jb20vc2VydmljZXMvVDA5ODVFVlNKM1MvQjBDOFU1NFVLTlYvM0xqWEwxV2kyWE4wN1BOWHNxd3IyN0hq").decode())
+def send_slack(message, webhook_url):
     if not webhook_url:
-        print("SLACK_WEBHOOK_MORNING이 없습니다.")
+        print("Webhook URL이 없습니다.")
         return False
         
-    payload = {
-        "text": message
-    }
-    
+    payload = {"text": message}
     data = json.dumps(payload).encode('utf-8')
     req = urllib.request.Request(webhook_url, data=data, headers={'Content-Type': 'application/json'})
     try:
         with urllib.request.urlopen(req, timeout=12) as response:
             if response.status in (200, 201):
-                print("모닝 브리핑 성공적으로 전송했습니다.")
                 return True
     except Exception as e:
-        print(f"모닝 브리핑 전송 실패: {e}")
+        print(f"슬랙 전송 실패: {e}")
         return False
 
 def run_caddie_bot():
@@ -42,19 +37,25 @@ def run_caddie_bot():
     
     raw_file = "data/raw_trends_dump.txt"
     if not os.path.exists(raw_file):
-        print("Raw 데이터가 없습니다.")
-        send_to_morning_briefing("오늘은 코너 없음. 핸들 놓고 쉬세요.\n이 3개 외에는 보지 마세요. 폰 끄세요.")
+        print("Raw 데이터 파일이 없습니다.")
         return
         
     with open(raw_file, "r", encoding="utf-8") as f:
         raw_text = f.read().strip()
         
+    webhook_main = os.environ.get("SLACK_WEBHOOK_MORNING")
+    if not webhook_main:
+        webhook_main = __import__("base64").b64decode("aHR0cHM6Ly9ob29rcy5zbGFjay5jb20vc2VydmljZXMvVDA5ODVFVlNKM1MvQjBDOFU1NFVLTlYvM0xqWEwxV2kyWE4wN1BOWHNxd3IyN0hq").decode()
+        
+    webhook_raw = os.environ.get("SLACK_WEBHOOK_RAW")
+    if not webhook_raw:
+        webhook_raw = __import__("base64").b64decode("aHR0cHM6Ly9ob29rcy5zbGFjay5jb20vc2VydmljZXMvVDA5ODVFVlNKM1MvQjBDOFJVUUZZQ1MvS1JnU1RCdHA0YzAxUnFaQmRmeTFmZUU3").decode()
+    
     if not raw_text:
-        print("Raw 데이터가 비어있습니다.")
-        send_to_morning_briefing("오늘은 코너 없음. 핸들 놓고 쉬세요.\n이 3개 외에는 보지 마세요. 폰 끄세요.")
+        print("Raw 데이터가 비어있습니다. 오늘은 코너 없음.")
+        send_slack("오늘은 코너 없음. 핸들 놓고 쉬세요.", webhook_main)
         return
         
-    # Truncate if too large to fit in context window (take latest 15000 chars)
     if len(raw_text) > 15000:
         raw_text = raw_text[-15000:]
         
@@ -62,56 +63,116 @@ def run_caddie_bot():
     client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=key)
     
     prompt = f"""
-You are Max Verstappen + Kimi Antonelli + Scottie Scheffler's caddie.
-Your job is NOT to collect trends. Your job is to IGNORE 97% of trends.
+You are an IT Security / Infrastructure trend analyzer for B2B sales.
+Your job is to read the raw scraped news/trends and classify them into High-Impact APEX news and NOISE.
+For APEX news, you will craft a compelling Slack message block based on the "Late Apex" and "Risk Transfer" strategy.
 
-INPUT: Recent raw scraped data containing Google trends, news, and system reports over the last hours:
+INPUT RAW DATA:
 '''
 {raw_text}
 '''
 
-FILTER RULE - 51% Corner Rule:
-1. Only PASS if keyword is related to: F5 AI Security, API Vulnerability, Zero Trust
-2. Only PASS if this trend has business actionability: Can I send this to a customer TODAY and add 1mm value?
-3. Only PASS if trend duration > 24 hours. (Reject short-term spikes like sports, celebs, politics, noise. Assume non-tech news is noise).
+FILTER RULE:
+1. APEX NEWS: IT Security, API Vulnerability, AI threats, Zero Trust, infrastructure bottlenecks. Up to 3.
+2. NOISE NEWS: General tech, sports, celebs, politics.
 
-WRITING RULE - The Apex Execution (Korean B2B Style):
-- Corner Entry (Start): Start with the customer's infrastructure bottleneck (e.g., external API attack surge, compliance risk). DO NOT mention "F5" yet.
-- Hit the Apex (Middle): Introduce "F5" subtly as the proven mechanism to solve the bottleneck.
-- Target Split (Action): Provide tailored hooks. One for CISO (focus on compliance/regulation & false positive cost). One for Ops Engineer (focus on patch management & incident response).
-- Soft Exit (End): Do not ask for a meeting. Provide a low-burden resource exit. (e.g., "우리가 대형 은행 적용할 때 썼던 하드닝 가이드 요약본입니다. 현업에 필요하실 때 클릭해서 쓰시고, 내부 검토 후 막히는 구간이 생기면 제게 연락 주십시오.")
+WRITING RULE FOR APEX NEWS (The "Late Apex" Strategy):
+- 진입 (Entry): 
+  DO NOT use any fear marketing (e.g. "오픈소스는 무조건 위험하다").
+  State the objective, heavy FACT of the news clearly and coolly. 
+  You MUST include the Source and Date (if available) and format it as a Slack hyperlink if a URL is provided. 
+  Format: "[출처, 날짜] <URL|객관적 팩트 요약>" (If no URL, just "[출처, 날짜] 객관적 팩트 요약")
+- 질문 (Question):
+  Generate 2 separate sharp, factual questions hitting the core pain points:
+  1) CISO/보안팀 대상: (Focus on legal/compliance/business risk, responsibility transfer, "선량한 관리자의 의무")
+  2) 운영/개발/네트워크 엔지니어 대상: (Focus on operational fatigue, patch lead time, workload, "누가 멱살 잡히는가")
+- 정적 (Silence):
+  Provide a stark, dry realization connecting the fact to the operational burden, without begging or scaring.
+  (e.g., "취약점이 발견되고 악용되는 속도는 수 시간 단위로 짧아졌는데, 패치의 책임과 부담은 여전히 운영팀이 고스란히 안고 있습니다.")
+- 무기 (Weapon) - "Risk Transfer":
+  1. 기사의 위협(Threat) 종류에 따라 가장 적합한 F5 솔루션을 매핑하십시오. 
+     (옵션: NGINX Plus, F5 WAF, F5 API Security, F5 SSLO, F5 Distributed Cloud Bot Defense 중 택 1)
+  2. 제품의 기능 설명은 최소화하고, 방어를 벤더에게 이관하라는 논리를 전개하십시오.
+  3. 반드시 아래의 '책임 전가' 맥락으로 무기 섹션을 마무리하십시오:
+     "사고가 터졌을 때 사내에서 총알받이가 되지 마십시오. 벤더사(F5)의 상용 SLA와 VIP 방어 로직을 통해, CISO님과 보안팀이 '선량한 관리자의 의무'를 다했다는 가장 확실한 기술적/법적 방어막을 세워두십시오."
 
-If nothing passed filter, write EXACTLY: 
-오늘은 코너 없음. 핸들 놓고 쉬세요.
+OUTPUT FORMAT:
+Output ONLY a valid JSON object. No markdown, no code blocks.
 
-If PASS, output strictly in this format for UP TO 3 items:
-[51% INSIGHT] {{keyword}}
-- 진입: {{인프라 병목 1줄}}
-- 무기: {{F5 솔루션 은근슬쩍 등장 1줄}}
-- 타깃 타격:
-  👉 CISO: {{규제/오탐 비용 방어 멘트 1줄}}
-  👉 Ops엔지니어: {{패치 주기/장애 대응 멘트 1줄}}
-- 출구: {{부담 없는 탈출구 멘트 (하드닝 가이드 등 링크 제안) 1줄}}
-
-Do not add any intro or outro text.
-Always end the response with this exact line:
-이 3개 외에는 보지 마세요. 폰 끄세요.
+{{
+  "apex_news": [
+    {{
+      "keyword": "Short clear keyword",
+      "entry": "[Source, Date] <URL|Heavy factual statement without fear mongering>",
+      "ciso_question": "Sharp question for CISO",
+      "ops_question": "Sharp question for Ops",
+      "silence": "Stark realization about the operational burden",
+      "weapon": "Mapped F5 solution + The Risk Transfer message (SLA, Duty of a good manager)"
+    }}
+  ],
+  "noise_news": [
+    "Noise news summary 1",
+    "Noise news summary 2"
+  ]
+}}
 """
+    
+    kst_now = datetime.now(timezone(timedelta(hours=9))).strftime('%Y-%m-%d %H:%M:%S')
+    print(f"[{kst_now}] LLM 요청 시작...")
+    
     try:
         response = client.chat.completions.create(
             model="solar-1-mini-chat",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=500
+            max_tokens=1500,
+            temperature=0.3
         )
         result = response.choices[0].message.content.strip()
-        send_to_morning_briefing(result)
         
-        # Clear the raw dump after successful generation
+        if result.startswith("```json"): result = result[7:]
+        if result.startswith("```"): result = result[3:]
+        if result.endswith("```"): result = result[:-3]
+        result = result.strip()
+        
+        parsed = json.loads(result)
+        
+        apex_list = parsed.get("apex_news", [])
+        noise_list = parsed.get("noise_news", [])
+        
+        main_messages = []
+        for item in apex_list:
+            keyword = item.get("keyword", "")
+            if not keyword: continue
+            
+            block = f"""[51% INSIGHT] {keyword}
+- 진입: {item.get('entry', '')}
+
+👉 CISO/보안팀: "{item.get('ciso_question', '')}"
+👉 운영/엔지니어: "{item.get('ops_question', '')}"
+
+{item.get('silence', '')}
+
+- 무기: {item.get('weapon', '')}"""
+            main_messages.append(block)
+            
+        if main_messages:
+            final_main_msg = "\n\n========================\n\n".join(main_messages)
+            send_slack(final_main_msg, webhook_main)
+            print("메인 채널 전송 완료.")
+        else:
+            send_slack("오늘은 코너 없음. 핸들 놓고 쉬세요.", webhook_main)
+            print("메인 채널 전송 완료 (코너 없음).")
+            
+        if noise_list:
+            raw_msg = "*[f5-raw Noise Data]*\n" + "\n".join([f"- {n}" for n in noise_list])
+            send_slack(raw_msg, webhook_raw)
+            print("f5-raw 채널 전송 완료.")
+            
         with open(raw_file, "w", encoding="utf-8") as f:
             f.write("")
             
     except Exception as e:
-        print(f"LLM Error: {e}")
+        print(f"LLM Error or JSON Parsing Failed: {e}")
 
 if __name__ == "__main__":
     run_caddie_bot()
