@@ -6,10 +6,10 @@ import json
 from openai import OpenAI
 
 def get_korea_news():
-    keywords = ["포티넷", "팔로알토네트웍스", "시스코", "클라우드 플레어", "아카마이", "AI", "SentinelOne", "Envoy", "Imperva", "Bot defense", "파이오링크", "라드웨어", "vmware", "nutanix", "minIO", "snowflake", "GPU", "데이터센터", "AI 보안", "사이버 보안", "클라우드 보안", "AI 기본법", "해킹", "KISA 보안공지", "재해복구", "DR"]
+    keywords = ["포티넷", "팔로알토네트웍스", "시스코", "클라우드 플레어", "아카마이", "A10 네트웍스", "AI", "SentinelOne", "Envoy", "Imperva", "Bot defense", "파이오링크", "라드웨어", "vmware", "nutanix", "minIO", "snowflake", "GPU", "데이터센터", "AI 보안", "사이버 보안", "클라우드 보안", "AI 기본법", "해킹", "KISA 보안공지", "재해복구", "DR"]
     
-    # Pick 3 random keywords
-    selected_kws = random.sample(keywords, 3)
+    # Pick 8 random keywords to increase volume
+    selected_kws = random.sample(keywords, 8)
     articles = []
     
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
@@ -32,14 +32,14 @@ def get_korea_news():
     prompt = f"""
 You are a B2B IT Security Sales AI. 
 I have scraped the following news articles from Korean portals today.
-Please select the 3 to 5 most attention-grabbing, high-impact articles relevant to IT infrastructure, security, or our competitors.
-OUTPUT EXACTLY A VALID JSON LIST OF OBJECTS with 'title' and 'link' keys. Do not include markdown blocks like ```json.
+Please select all attention-grabbing, high-impact articles relevant to IT infrastructure, security, or our competitors. Do not artificially limit the number of articles; pick as many as are highly relevant.
+OUTPUT EXACTLY A VALID JSON LIST OF OBJECTS with 'keyword', 'title' and 'link' keys. Do not include markdown blocks like ```json.
 Articles:
 {json.dumps(articles, ensure_ascii=False, indent=2)}
 
 Format:
 [
-  {{"title": "article title", "link": "url"}}, ...
+  {{"keyword": "keyword from input", "title": "article title", "link": "url"}}, ...
 ]
 """
     
@@ -82,12 +82,13 @@ Format:
         curated = json.loads(result_text)
         if not curated: return ""
         
-        output = "\n\n*[오늘의 경쟁사 및 핫 트렌드 모니터링]*\n"
+        output = "\n\n*[오늘의 경쟁사 및 핫 트렌드 모니터링]*\n\n"
         for idx, item in enumerate(curated):
+            keyword = item.get("keyword", "트렌드")
             title = item.get("title", "").replace('\n', ' ')
             link = item.get("link", "")
-            output += f"• <{link}|{title}>\n"
-        return output
+            output += f"키워드: {keyword}\n기사: <{link}|{title}>\n\n"
+        return output.strip() + "\n"
     except Exception as e:
         print(f"JSON Parse error: {e}")
         return ""
