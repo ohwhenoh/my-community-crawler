@@ -84,27 +84,30 @@ WRITING RULE FOR APEX NEWS (The "Late Apex" Strategy):
   Format: "[출처, 날짜] <URL|객관적 팩트 요약>" (If no URL, just "[출처, 날짜] 객관적 팩트 요약")
 - 지역화 (Localization) 우선순위:
   반드시 대한민국(South Korea)의 보안 사고, 공공/금융 규제, 기업 피해 사례를 최우선으로 탐색하여 맥락을 프레이밍하십시오. 국내 사례가 전혀 없을 경우에만 미국(US) 등 글로벌 사례로 넘어갑니다.
+- 오프닝 (Agent's Manifesto):
+  "F5 OOO입니다. 후속 통화 괜찮으십니까?"로 시작하는 기존 B2B 세일즈 톤의 에이전트 선언문을 기사 맥락에 맞춰 매일 조금씩 다르게 창작하십시오 (약 2~3문장). 이 오프닝은 깊고 건조한 목소리여야 합니다.
 - 심리적 후킹 및 맥락 (Hooking & Context):
   절대 "미팅할 시간 되나요?", "어떻게 대응하고 있나요?" 같은 고객의 뇌 연산 부하를 요구하는 질문(Heavy 쿼리)을 던지지 마십시오.
-  대신, 기사의 위협과 관련하여 상용 SLA 보증이 없을 때 그 공백 기간 동안 사고가 발생하면 징계와 책임이 온전히 내부 인프라 및 보안 책임자에게 '독박'으로 쏠리게 되는 현실(규제 감사 타깃 등)을 건조하게 짚어주십시오.
-  (예: "최근 오픈소스 취약점(CVE) 발표 직후 커뮤니티의 공식 패치가 배포되기 전까지 발생하는 '방어 공백' 기간이, 규제 기관 보안 감사의 핵심 타깃이 되고 있습니다. 상용 SLA 보증이 없는 오픈소스 인프라 특성상, 이 공백 기간 동안 사고가 발생할 경우 그 징계와 책임은 온전히 내부 인프라 및 보안 책임자에게 독박으로 쏠리게 됩니다.")
+  대신, 기사의 위협과 관련하여 상용 SLA 보증이 없을 때 그 공백 기간 동안 사고가 발생하면 징계와 책임이 온전히 내부 인프라 및 보안 책임자에게 쏠리게 되는 현실(규제 감사 타깃 등)을 건조하게 짚어주십시오.
+  **[필수 지시]** 이 섹션에서 "독박", "면책", "알리바이"라는 날것의 단어 중 최소 1~2개를 반드시 문맥에 맞게 변주하여 직접 사용해야 합니다.
 - 무기 및 출구 전략 (Weapon & Exit Strategy) - "Risk Transfer":
   미팅을 구걸하지 말고 "필요할 때 네가 호출해라"라며 통제권을 완전히 넘기십시오(Steering Wheel 이양). 
-  외부 감사 시 '선량한 관리자의 주의 의무'를 다했음을 기술적으로 증명하고 책임을 외부로 전가할 수 있는 **'1장짜리 내부 결재용 방어 로직(알리바이)'**이나 '리스크 면책용 대응 레퍼런스'를 남겨둔다고 명시하며 쿨하게 이탈하십시오.
+  외부 감사 시 '선량한 관리자의 주의 의무'를 다했음을 기술적으로 증명하고 책임을 외부로 전가할 수 있는 **'1장짜리 내부 결재용 방어 로직(알리바이)'**을 남겨둔다고 명시하며 쿨하게 이탈하십시오.
+  **[필수 지시: Bait & Switch]** 하단에 제공하는 [무기]는 모든 것을 다 퍼주는 가이드가 아니라, 고객이 진짜 핵심 정보를 얻으려면 결국 파트너(벤더)에게 연락(Ping)할 수밖에 없도록 요약본(티저) 형태의 미끼를 던지는 뉘앙스로 작성하십시오.
   위협(Threat)에 맞는 최적의 F5 솔루션(예: F5 WAF, F5 WAAP, F5 API Security, NGINX Plus 등 자율 매핑)을 유추하여 이 레퍼런스의 주체로 삼으십시오.
-  (예: "외부 감사 시 '선량한 관리자의 주의 의무'를 다했음을 기술적으로 증명하고 책임을 외부로 전가할 수 있는, 동종 업계의 '오픈소스 리스크 면책용 대응 레퍼런스'를 남겨둡니다. 내부 검토 후 필요하실 때 핑 주십시오.")
 
 OUTPUT FORMAT:
 Output ONLY a valid JSON object. No markdown, no code blocks.
 
 {{
+  "manifesto": "Dynamically generated 2-3 sentence Agent's Manifesto for today's context.",
   "apex_news": [
     {{
       "keyword": "Short clear keyword",
       "entry": "[Source, Date] <URL|Heavy factual statement without fear mongering>",
       "hooking_context": "Dry context about the risk of '독박' responsibility and regulatory audit target.",
-      "exit_strategy": "Cool exit offering the 1-page defense logic/reference and handing over control (e.g. '필요할 때 핑 주십시오').",
-      "f5_reference": "Mapped F5 solution name (e.g. F5 WAAP 방어 로직 레퍼런스)"
+      "exit_strategy": "Cool exit offering a teaser/bait for the 1-page defense logic, forcing a Ping.",
+      "f5_reference": "Mapped F5 solution name (e.g. F5 WAAP 방어 로직 티저)"
     }}
   ],
   "noise_news": [
@@ -135,12 +138,11 @@ Output ONLY a valid JSON object. No markdown, no code blocks.
         
         apex_list = parsed.get("apex_news", [])
         noise_list = parsed.get("noise_news", [])
+        manifesto_text = parsed.get("manifesto", "F5 OOO입니다. 후속으로 짧게 통화 괜찮으십니까?")
         
         main_messages = []
         
-        manifesto = """*[Agent's Manifesto]*
-에이펙스: (깊은 목소리로) "F5 OOO입니다. OOO 건 후속으로 짧게 통화 괜찮으십니까? 최근 OOO 관련 프론티어 AI 방어에 대한 이야기가 계속 나오는데, 다른 조직에서는 이 책임 소재 리스크에 어떻게 대응하시는지 공유 차원에서 메일 보내드렸습니다. 편하실 때 확인 부탁드립니다."
-"""
+        manifesto = f"*[Agent's Manifesto]*\n에이펙스: (깊은 목소리로) \"{manifesto_text}\"\n"
         main_messages.append(manifesto)
 
         for item in apex_list:
