@@ -147,22 +147,33 @@ Output ONLY a valid JSON object. No markdown, no code blocks.
             
             block = f"""[51% INSIGHT] {keyword}
 
-🏎️ *[진입: 뉴스 팩트 투척]*
+*[진입: 뉴스 팩트 투척]*
 - {item.get('entry', '')}
 
-🛑 *[브레이킹 포인트: 반발과 섀도복싱]*
+*[브레이킹 포인트: 반발과 섀도복싱]*
 *Q1: "F5에서 제공한 자료 들이밀면 내부 감사가 방어 됩니까?"*
-  👉 {item.get('counter_1', '')}
+  - {item.get('counter_1', '')}
 
 *Q2: "안 사도 여태껏 서버 안 터졌어"*
-  👉 {item.get('counter_2', '')}
+  - {item.get('counter_2', '')}
 
-🔥 *[Late Apex & 스티어링 최대 조향: 통제권 이양 및 출구 전략]*
+*[Late Apex & 스티어링 최대 조향: 통제권 이양 및 출구 전략]*
 - {item.get('exit_strategy', '')}"""
             main_messages.append(block)
             
         if len(main_messages) > 1:
             final_main_msg = "\n\n========================\n\n".join(main_messages)
+            
+            # Fetch Korea News and append to final_main_msg
+            from korea_curator import get_korea_news
+            korea_news = get_korea_news()
+            if korea_news:
+                final_main_msg += "\n\n========================\n\n" + korea_news
+                
+            print("\n--- FINAL PAYLOAD FULL PRINT ---")
+            print(final_main_msg)
+            print("--------------------------------\n")
+            
             send_slack(final_main_msg, webhook_main)
             print("메인 채널 전송 완료.")
         else:
