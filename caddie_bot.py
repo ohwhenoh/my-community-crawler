@@ -84,19 +84,15 @@ WRITING RULE FOR APEX NEWS (The "Late Apex" Strategy):
   Format: "[출처, 날짜] <URL|객관적 팩트 요약>" (If no URL, just "[출처, 날짜] 객관적 팩트 요약")
 - 지역화 (Localization) 우선순위:
   반드시 대한민국(South Korea)의 보안 사고, 공공/금융 규제, 기업 피해 사례를 최우선으로 탐색하여 맥락을 프레이밍하십시오. 국내 사례가 전혀 없을 경우에만 미국(US) 등 글로벌 사례로 넘어갑니다.
-- 질문 (Question):
-  Generate 2 separate sharp, factual, and CONCISE questions (under 15 words) hitting the core pain points:
-  1) CISO/보안팀 대상: (Focus on legal/compliance/business risk, responsibility transfer, "선량한 관리자의 의무")
-  2) 운영/개발/네트워크 엔지니어 대상: (Focus on operational fatigue, patch lead time, workload, "누가 멱살 잡히는가")
-- 정적 (Silence):
-  Provide a stark, dry realization connecting the fact to the operational burden, without begging or scaring.
-  (e.g., "취약점이 발견되고 악용되는 속도는 수 시간 단위로 짧아졌는데, 패치의 책임과 부담은 여전히 운영팀이 고스란히 안고 있습니다.")
-- 무기 (Weapon) - "Risk Transfer":
-  1. 기사의 위협(Threat) 종류와 최신 보안 트렌드를 분석하여 가장 적합한 F5 솔루션을 유연하게 매핑하십시오. 
-     (예시: NGINX Plus, F5 WAF, F5 WAAP, F5 API Security, F5 SSLO, F5 Distributed Cloud Bot Defense 등. 필요시 LLM의 지식을 바탕으로 예시에 없는 최적의 F5 솔루션이나 트렌드 키워드를 자율적으로 제시해도 무방합니다.)
-  2. 제품의 기능 설명은 최소화하고, 방어를 벤더에게 이관하라는 논리를 전개하십시오.
-  3. 반드시 아래의 '책임 전가' 맥락으로 무기 섹션을 마무리하십시오:
-     "사고가 터졌을 때 사내에서 총알받이가 되지 마십시오. 벤더사(F5)의 상용 SLA와 VIP 방어 로직을 통해, CISO님과 보안팀이 '선량한 관리자의 의무'를 다했다는 가장 확실한 기술적/법적 방어막을 세워두십시오."
+- 심리적 후킹 및 맥락 (Hooking & Context):
+  절대 "미팅할 시간 되나요?", "어떻게 대응하고 있나요?" 같은 고객의 뇌 연산 부하를 요구하는 질문(Heavy 쿼리)을 던지지 마십시오.
+  대신, 기사의 위협과 관련하여 상용 SLA 보증이 없을 때 그 공백 기간 동안 사고가 발생하면 징계와 책임이 온전히 내부 인프라 및 보안 책임자에게 '독박'으로 쏠리게 되는 현실(규제 감사 타깃 등)을 건조하게 짚어주십시오.
+  (예: "최근 오픈소스 취약점(CVE) 발표 직후 커뮤니티의 공식 패치가 배포되기 전까지 발생하는 '방어 공백' 기간이, 규제 기관 보안 감사의 핵심 타깃이 되고 있습니다. 상용 SLA 보증이 없는 오픈소스 인프라 특성상, 이 공백 기간 동안 사고가 발생할 경우 그 징계와 책임은 온전히 내부 인프라 및 보안 책임자에게 독박으로 쏠리게 됩니다.")
+- 무기 및 출구 전략 (Weapon & Exit Strategy) - "Risk Transfer":
+  미팅을 구걸하지 말고 "필요할 때 네가 호출해라"라며 통제권을 완전히 넘기십시오(Steering Wheel 이양). 
+  외부 감사 시 '선량한 관리자의 주의 의무'를 다했음을 기술적으로 증명하고 책임을 외부로 전가할 수 있는 **'1장짜리 내부 결재용 방어 로직(알리바이)'**이나 '리스크 면책용 대응 레퍼런스'를 남겨둔다고 명시하며 쿨하게 이탈하십시오.
+  위협(Threat)에 맞는 최적의 F5 솔루션(예: F5 WAF, F5 WAAP, F5 API Security, NGINX Plus 등 자율 매핑)을 유추하여 이 레퍼런스의 주체로 삼으십시오.
+  (예: "외부 감사 시 '선량한 관리자의 주의 의무'를 다했음을 기술적으로 증명하고 책임을 외부로 전가할 수 있는, 동종 업계의 '오픈소스 리스크 면책용 대응 레퍼런스'를 남겨둡니다. 내부 검토 후 필요하실 때 핑 주십시오.")
 
 OUTPUT FORMAT:
 Output ONLY a valid JSON object. No markdown, no code blocks.
@@ -106,10 +102,9 @@ Output ONLY a valid JSON object. No markdown, no code blocks.
     {{
       "keyword": "Short clear keyword",
       "entry": "[Source, Date] <URL|Heavy factual statement without fear mongering>",
-      "ciso_question": "Sharp question for CISO",
-      "ops_question": "Sharp question for Ops",
-      "silence": "Stark realization about the operational burden",
-      "weapon": "Mapped F5 solution + The Risk Transfer message (SLA, Duty of a good manager)"
+      "hooking_context": "Dry context about the risk of '독박' responsibility and regulatory audit target.",
+      "exit_strategy": "Cool exit offering the 1-page defense logic/reference and handing over control (e.g. '필요할 때 핑 주십시오').",
+      "f5_reference": "Mapped F5 solution name (e.g. F5 WAAP 방어 로직 레퍼런스)"
     }}
   ],
   "noise_news": [
@@ -155,12 +150,12 @@ Output ONLY a valid JSON object. No markdown, no code blocks.
             block = f"""[51% INSIGHT] {keyword}
 - 진입: {item.get('entry', '')}
 
-👉 CISO/보안팀: "{item.get('ciso_question', '')}"
-👉 운영/엔지니어: "{item.get('ops_question', '')}"
+{item.get('hooking_context', '')}
 
-{item.get('silence', '')}
+{item.get('exit_strategy', '')}
 
-- 무기: {item.get('weapon', '')}"""
+
+- 무기: {item.get('f5_reference', '')}"""
             main_messages.append(block)
             
         if len(main_messages) > 1:
