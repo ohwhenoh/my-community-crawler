@@ -80,12 +80,12 @@ WRITING RULE FOR APEX NEWS (The "Late Apex" Strategy):
 - 진입 (Entry): 
   DO NOT use any fear marketing (e.g. "오픈소스는 무조건 위험하다").
   State the objective, heavy FACT of the news clearly and coolly. 
-  You MUST include the Source and Date (if available) and format it as a Slack hyperlink if a URL is provided. 
+  You MUST format the link EXACTLY using Slack's markdown: "<URL|객관적 팩트 요약>" (Do not print URL outside the brackets). 
   Format: "[출처, 날짜] <URL|객관적 팩트 요약>" (If no URL, just "[출처, 날짜] 객관적 팩트 요약")
 - 지역화 (Localization) 우선순위:
   반드시 대한민국(South Korea)의 보안 사고, 공공/금융 규제, 기업 피해 사례를 최우선으로 탐색하여 맥락을 프레이밍하십시오. 국내 사례가 전혀 없을 경우에만 미국(US) 등 글로벌 사례로 넘어갑니다.
 - 질문 (Question):
-  Generate 2 separate sharp, factual questions hitting the core pain points:
+  Generate 2 separate sharp, factual, and CONCISE questions (under 15 words) hitting the core pain points:
   1) CISO/보안팀 대상: (Focus on legal/compliance/business risk, responsibility transfer, "선량한 관리자의 의무")
   2) 운영/개발/네트워크 엔지니어 대상: (Focus on operational fatigue, patch lead time, workload, "누가 멱살 잡히는가")
 - 정적 (Silence):
@@ -142,6 +142,12 @@ Output ONLY a valid JSON object. No markdown, no code blocks.
         noise_list = parsed.get("noise_news", [])
         
         main_messages = []
+        
+        manifesto = """*[Agent's Manifesto]*
+에이펙스: (깊은 목소리로) "F5 OOO입니다. OOO 건 후속으로 짧게 통화 괜찮으십니까? 최근 OOO 관련 프론티어 AI 방어에 대한 이야기가 계속 나오는데, 다른 조직에서는 이 책임 소재 리스크에 어떻게 대응하시는지 공유 차원에서 메일 보내드렸습니다. 편하실 때 확인 부탁드립니다."
+"""
+        main_messages.append(manifesto)
+
         for item in apex_list:
             keyword = item.get("keyword", "")
             if not keyword: continue
@@ -157,7 +163,7 @@ Output ONLY a valid JSON object. No markdown, no code blocks.
 - 무기: {item.get('weapon', '')}"""
             main_messages.append(block)
             
-        if main_messages:
+        if len(main_messages) > 1:
             final_main_msg = "\n\n========================\n\n".join(main_messages)
             send_slack(final_main_msg, webhook_main)
             print("메인 채널 전송 완료.")
