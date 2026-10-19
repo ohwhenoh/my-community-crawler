@@ -88,10 +88,14 @@ Format:
         curated = []
         pattern = re.compile(r'\{\s*"keyword"\s*:\s*"([^"]+)"\s*,\s*"title"\s*:\s*"([^"]+)"\s*,\s*"link"\s*:\s*"([^"]+)"\s*\}')
         for match in pattern.finditer(result_text):
-            kw = codecs.decode(match.group(1), 'unicode_escape')
-            title = codecs.decode(match.group(2), 'unicode_escape')
-            link = codecs.decode(match.group(3), 'unicode_escape')
-            curated.append({"keyword": kw, "title": title, "link": link})
+            try:
+                # LLM might return raw UTF-8 or json escaped utf-8. Let json parser handle just the string part.
+                kw = json.loads(f'"{match.group(1)}"')
+                title = json.loads(f'"{match.group(2)}"')
+                link = match.group(3)
+                curated.append({"keyword": kw, "title": title, "link": link})
+            except:
+                curated.append({"keyword": match.group(1), "title": match.group(2), "link": match.group(3)})
         
     try:
         if not curated: return ""
