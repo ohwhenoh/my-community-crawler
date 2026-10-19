@@ -90,8 +90,8 @@ WRITING RULE FOR APEX NEWS (The "Late Apex" Strategy):
   Provide a stark, dry realization connecting the fact to the operational burden, without begging or scaring.
   (e.g., "취약점이 발견되고 악용되는 속도는 수 시간 단위로 짧아졌는데, 패치의 책임과 부담은 여전히 운영팀이 고스란히 안고 있습니다.")
 - 무기 (Weapon) - "Risk Transfer":
-  1. 기사의 위협(Threat) 종류에 따라 가장 적합한 F5 솔루션을 매핑하십시오. 
-     (옵션: NGINX Plus, F5 WAF, F5 API Security, F5 SSLO, F5 Distributed Cloud Bot Defense 중 택 1)
+  1. 기사의 위협(Threat) 종류와 최신 보안 트렌드를 분석하여 가장 적합한 F5 솔루션을 유연하게 매핑하십시오. 
+     (예시: NGINX Plus, F5 WAF, F5 WAAP, F5 API Security, F5 SSLO, F5 Distributed Cloud Bot Defense 등. 필요시 LLM의 지식을 바탕으로 예시에 없는 최적의 F5 솔루션이나 트렌드 키워드를 자율적으로 제시해도 무방합니다.)
   2. 제품의 기능 설명은 최소화하고, 방어를 벤더에게 이관하라는 논리를 전개하십시오.
   3. 반드시 아래의 '책임 전가' 맥락으로 무기 섹션을 마무리하십시오:
      "사고가 터졌을 때 사내에서 총알받이가 되지 마십시오. 벤더사(F5)의 상용 SLA와 VIP 방어 로직을 통해, CISO님과 보안팀이 '선량한 관리자의 의무'를 다했다는 가장 확실한 기술적/법적 방어막을 세워두십시오."
