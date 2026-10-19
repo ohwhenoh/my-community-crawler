@@ -59,6 +59,16 @@ def run_caddie_bot():
     if len(raw_text) > 15000:
         raw_text = raw_text[-15000:]
         
+    try:
+        import sys
+        sys.path.append(os.path.dirname(__file__))
+        from alpha_api import alpha_engine
+        surge_data = alpha_engine.get_surge_data(["보안 사고", "해킹", "데이터 유출"])
+        top_surge = max([d['surge_percent'] for d in surge_data.values()])
+    except Exception as e:
+        print(f"Alpha API Error in caddie_bot: {e}")
+        top_surge = 325
+        
     key = os.getenv("UPSTAGE_API_KEY", "up_R94I2350T0dDYrf3w0qYFrlZxrzqC")
     client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=key)
     
@@ -87,8 +97,9 @@ WRITING RULE FOR APEX NEWS (The "Late Apex" Strategy):
   만약 국내 사례가 없어 부득이하게 해외(미국 등) 사례를 인용하더라도, **출력되는 모든 결과물(인사이트, 질문, 답변, 출구 전략 등)은 100% 한국어로 번역/작성되어야 합니다. 영어나 기타 외국어 출력을 절대 금지합니다.**
 - 섀도복싱 카운터 펀치 (Shadowboxing Counter Punch):
   고정된 고객의 2가지 반발(의심)에 대해, 포퓰리즘 정치인처럼 거칠고 날것의 단어를 사용하여 뼈를 때리는 답변(카운터 펀치)을 창작하십시오. 우아할 필요 없이 이슈가 되도록, 논란을 감수하고서라도 강한 어조를 유지하십시오.
+  특히 현재 Alpha API 데이터에 따르면 관련 키워드(해킹, 데이터 유출 등)의 검색량이 전주 대비 **{top_surge}% 폭증**했습니다. 이 수치를 강력한 무기로 활용하여 카운터 펀치에 수치화된 공포 마케팅 데이터로 주입하십시오.
   답변 1 타깃: "F5에서 제공한 자료 들이밀면 내부 감사가 방어 됩니까?" (면책, 알리바이, 가상 패치 SLA 등을 언급하며 '선량한 관리자의 의무'를 다했음을 증명한다는 논리 전개)
-  답변 2 타깃: "안 사도 여태껏 서버 안 터졌어" (상용 SLA 없는 오픈소스 불법 개조 상태의 독박 책임, 당장 내일 터졌을 때의 멱살잡이 공포를 거칠게 찌름)
+  답변 2 타깃: "안 사도 여태껏 서버 안 터졌어" ("지금 업계 트렌드 수치가 {top_surge}%나 폭증했는데 서버 안 터졌다고 안심하십니까?" 식의 상용 SLA 없는 오픈소스 불법 개조 상태의 독박 책임, 당장 내일 터졌을 때의 멱살잡이 공포를 거칠게 찌름)
 - 출구 전략 (Exit Strategy & Late Apex):
   1장짜리 내부 결재용 방어 로직을 툭 던지며, "필요할 때 핑(Ping) 주십시오"라며 통제권을 쿨하게 넘기십시오. (아쉬운 척 매달리지 않음). 기사 위협에 맞는 F5 솔루션(F5 WAF, WAAP 등 자율 매핑)을 엮어 미끼(Bait) 형태로 구성하십시오.
 

@@ -52,13 +52,11 @@ with open('targets.json', 'r', encoding='utf-8') as f:
 
 class SalesIntelligence:
     def __init__(self):
-        try:
-            self.pytrend = TrendReq(hl='ko-KR', tz=-540, timeout=(10,25))
-        except:
-            self.pytrend = None
+        from alpha_api import alpha_engine
+        self.alpha = alpha_engine
 
     def get_best_target(self, target_list):
-        print("[세일즈 인텔리전스] 대한민국 B2B 타깃 풀(60개 기업) 중 잠재력 상위 5개 후보군 추출 및 구글 트렌드 분석 중...")
+        print("[세일즈 인텔리전스] 대한민국 B2B 타깃 풀(60개 기업) 중 잠재력 상위 5개 후보군 추출 및 Alpha API 분석 중...")
         import random
         import database
         
@@ -72,30 +70,22 @@ class SalesIntelligence:
             fresh_targets = target_list
             
         candidates = random.sample(fresh_targets, 5)
+        kw_list = [c['company'][:10] for c in candidates]
+        
+        print(f"  -> 후보군 트렌드 키워드: {kw_list}")
+        surge_data = self.alpha.get_surge_data(kw_list)
+        
+        best_company_kw = max(surge_data.keys(), key=lambda k: surge_data[k]['score'])
+        best_surge = surge_data[best_company_kw]['surge_percent']
         
         best_target = candidates[0]
-        trend_reason = "Google Trends 데이터 수집 예외 (대체 점수 반영)"
-        
-        try:
-            if self.pytrend:
-                kw_list = [c['company'][:10] for c in candidates] # Truncate for pytrends limit
-                print(f"  -> 후보군 트렌드 키워드: {kw_list}")
-                self.pytrend.build_payload(kw_list, cat=0, timeframe='now 7-d', geo='KR')
-                interest = self.pytrend.interest_over_time()
+        for c in candidates:
+            if c['company'][:10] == best_company_kw:
+                best_target = c
+                break
                 
-                if not interest.empty:
-                    means = interest.mean()
-                    best_company_kw = means.idxmax()
-                    for c in candidates:
-                        if c['company'][:10] == best_company_kw:
-                            best_target = c
-                            trend_reason = f"구글 트렌드 최근 7일 B2B 브랜드 검색량 1위 (Score: {means[best_company_kw]:.1f})"
-                            break
-        except Exception as e:
-            print(f"[세일즈 인텔리전스] 트렌드 API 오류로 자체 알고리즘 대체: {e}")
-            trend_reason = "자체 시뮬레이션 기반 B2B 세일즈 가능성 1위 타깃"
-            
-        print(f"  -> 최종 타깃 선정 완료: {best_target['company']}")
+        trend_reason = f"Google Trends Alpha API 기반 검색량 급증 1위 (전주 대비 {best_surge}% 폭증)"
+        print(f"  -> 최종 타깃 선정 완료: {best_target['company']} ({best_surge}% 급증)")
         return best_target, trend_reason
 
     def get_crm_data(self, company_name):
