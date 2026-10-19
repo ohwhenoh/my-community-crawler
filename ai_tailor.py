@@ -36,7 +36,7 @@ def generate_personalized_hook(target_name, scraped_content):
     if nvidia_key:
         logger.info("[Health Check] NVIDIA NIM API 상태 체크 및 생성 시도...")
         try:
-            client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=6.0, max_retries=1)
+            client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=30.0, max_retries=1)
             response = client.chat.completions.create(
                 model="meta/llama-3.2-11b-vision-instruct",
                 messages=[{"role": "user", "content": prompt}],
@@ -54,7 +54,7 @@ def generate_personalized_hook(target_name, scraped_content):
     if upstage_key:
         logger.info("[Health Check] Upstage Solar API 폴백 구동 중...")
         try:
-            client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=upstage_key, timeout=10.0, max_retries=2)
+            client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=upstage_key, timeout=30.0, max_retries=2)
             response = client.chat.completions.create(
                 model="solar-1-mini-chat",
                 messages=[{"role": "user", "content": prompt}],
