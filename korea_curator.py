@@ -8,18 +8,8 @@ from openai import OpenAI
 def get_korea_news():
     keywords = ["포티넷", "팔로알토네트웍스", "시스코", "클라우드 플레어", "아카마이", "A10 네트웍스", "AI", "SentinelOne", "Envoy", "Imperva", "Bot defense", "파이오링크", "라드웨어", "vmware", "nutanix", "minIO", "snowflake", "GPU", "데이터센터", "AI 보안", "사이버 보안", "클라우드 보안", "AI 기본법", "해킹", "KISA 보안공지", "재해복구", "DR"]
     
-    try:
-        from alpha_api import alpha_engine
-        print("Alpha API: 26개 전체 키워드 트렌드 급증량 분석 시작...")
-        surge_data = alpha_engine.get_surge_data(keywords)
-        
-        # Sort by surge percent descending and pick top 8
-        sorted_kws = sorted(keywords, key=lambda k: surge_data.get(k, {}).get('surge_percent', 0), reverse=True)
-        selected_kws = sorted_kws[:8]
-        print(f"Alpha API 선정 Top 8 키워드: {selected_kws}")
-    except Exception as e:
-        print(f"Alpha API 오류, 랜덤으로 폴백: {e}")
-        selected_kws = random.sample(keywords, 8)
+    print("키워드 중 랜덤 추출 중...")
+    selected_kws = random.sample(keywords, 9)
         
     articles = []
     

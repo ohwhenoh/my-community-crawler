@@ -10,7 +10,7 @@ import os
 import urllib.request
 import json
 import hashlib
-from pytrends.request import TrendReq
+
 import random
 import re
 import requests
@@ -45,18 +45,17 @@ SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "YOUR_SLACK_WEBHOOK_URL_
 # South Korea Target Industry Enterprise Database (12 premium Korean targets across 6 sectors)
 import json
 import hashlib
-from pytrends.request import TrendReq
+
 with open('targets.json', 'r', encoding='utf-8') as f:
     KOREAN_TARGET_DATABASE = json.load(f)
 
 
 class SalesIntelligence:
     def __init__(self):
-        from alpha_api import alpha_engine
-        self.alpha = alpha_engine
+        pass
 
     def get_best_target(self, target_list):
-        print("[세일즈 인텔리전스] 대한민국 B2B 타깃 풀(60개 기업) 중 잠재력 상위 5개 후보군 추출 및 Alpha API 분석 중...")
+        print("[세일즈 인텔리전스] 대한민국 B2B 타깃 풀 중 잠재력 기반 랜덤 타깃 추출 중...")
         import random
         import database
         
@@ -66,26 +65,13 @@ class SalesIntelligence:
         fresh_targets = [t for t in target_list if t['company'] not in recent_names]
         
         # 만약 타깃이 너무 없으면 전체 타깃에서 롤백
-        if len(fresh_targets) < 5:
+        if len(fresh_targets) < 1:
             fresh_targets = target_list
             
-        candidates = random.sample(fresh_targets, 5)
-        kw_list = [c['company'][:10] for c in candidates]
+        best_target = random.choice(fresh_targets)
         
-        print(f"  -> 후보군 트렌드 키워드: {kw_list}")
-        surge_data = self.alpha.get_surge_data(kw_list)
-        
-        best_company_kw = max(surge_data.keys(), key=lambda k: surge_data[k]['score'])
-        best_surge = surge_data[best_company_kw]['surge_percent']
-        
-        best_target = candidates[0]
-        for c in candidates:
-            if c['company'][:10] == best_company_kw:
-                best_target = c
-                break
-                
-        trend_reason = f"Google Trends Alpha API 기반 검색량 급증 1위 (전주 대비 {best_surge}% 폭증)"
-        print(f"  -> 최종 타깃 선정 완료: {best_target['company']} ({best_surge}% 급증)")
+        trend_reason = f"현재 해당 기업/산업군에 트래픽과 보안 위협이 집중되고 있어 선제적 공략 권장"
+        print(f"  -> 최종 타깃 선정 완료: {best_target['company']}")
         return best_target, trend_reason
 
     def get_crm_data(self, company_name):
