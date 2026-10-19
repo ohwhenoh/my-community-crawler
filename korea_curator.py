@@ -54,7 +54,7 @@ Format:
         if not nvidia_key: raise Exception("No NVIDIA Key")
         client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=30.0, max_retries=2)
         resp = client.chat.completions.create(
-            model="meta/llama-3.1-70b-instruct",
+            model="meta/llama-3.2-90b-vision-instruct",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=1000
