@@ -34,6 +34,7 @@ You are a B2B IT Security Sales AI.
 I have scraped the following news articles from Korean portals today.
 Please select all attention-grabbing, high-impact articles relevant to IT infrastructure, security, or our competitors. Do not artificially limit the number of articles; pick as many as are highly relevant.
 OUTPUT EXACTLY A VALID JSON LIST OF OBJECTS with 'keyword', 'title' and 'link' keys. Do not include markdown blocks like ```json.
+Ensure your JSON is perfectly valid. Do NOT use unicode escapes like \\uXXXX, use raw UTF-8 characters.
 Articles:
 {json.dumps(articles, ensure_ascii=False, indent=2)}
 
@@ -80,6 +81,15 @@ Format:
     
     try:
         curated = json.loads(result_text)
+    except json.JSONDecodeError as e:
+        print(f"JSON Parse error: {e}. Attempting regex fallback.")
+        import re
+        curated = []
+        pattern = re.compile(r'\{\s*"keyword"\s*:\s*"([^"]+)"\s*,\s*"title"\s*:\s*"([^"]+)"\s*,\s*"link"\s*:\s*"([^"]+)"\s*\}')
+        for match in pattern.finditer(result_text):
+            curated.append({"keyword": match.group(1), "title": match.group(2), "link": match.group(3)})
+        
+    try:
         if not curated: return ""
         
         output = "\n\n*[오늘의 경쟁사 및 핫 트렌드 모니터링]*\n\n"
