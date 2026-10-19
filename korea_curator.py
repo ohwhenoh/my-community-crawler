@@ -50,7 +50,7 @@ Format:
     # Try NVIDIA First
     try:
         if not nvidia_key: raise Exception("No NVIDIA Key")
-        client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=10.0, max_retries=1)
+        client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=30.0, max_retries=2)
         resp = client.chat.completions.create(
             model="meta/llama-3.1-70b-instruct",
             messages=[{"role": "user", "content": prompt}],
@@ -61,7 +61,7 @@ Format:
     except Exception as e:
         print(f"NVIDIA API Failed: {e}. Falling back to Solar.")
         try:
-            client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=upstage_key, timeout=10.0, max_retries=1)
+            client = OpenAI(base_url="https://api.upstage.ai/v1/solar", api_key=upstage_key, timeout=30.0, max_retries=2)
             resp = client.chat.completions.create(
                 model="solar-1-mini-chat",
                 messages=[{"role": "user", "content": prompt}],
