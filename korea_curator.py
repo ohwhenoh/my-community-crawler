@@ -89,11 +89,13 @@ Format:
         pattern = re.compile(r'\{\s*"keyword"\s*:\s*"([^"]+)"\s*,\s*"title"\s*:\s*"([^"]+)"\s*,\s*"link"\s*:\s*"([^"]+)"\s*\}')
         for match in pattern.finditer(result_text):
             try:
-                kw = json.loads('"' + match.group(1).replace('"', '\\"') + '"')
+                raw_kw = match.group(1).replace('\\', '\\\\').replace('"', '\\"')
+                kw = json.loads('"' + raw_kw + '"')
             except:
                 kw = match.group(1)
             try:
-                title = json.loads('"' + match.group(2).replace('"', '\\"') + '"')
+                raw_title = match.group(2).replace('\\', '\\\\').replace('"', '\\"')
+                title = json.loads('"' + raw_title + '"')
             except:
                 title = match.group(2)
             link = match.group(3)
