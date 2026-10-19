@@ -16,7 +16,7 @@ def check_apis():
     try:
         client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=6.0, max_retries=0)
         res = client.chat.completions.create(
-            model="meta/llama-3.2-11b-vision-instruct",
+            model="meta/llama-3.3-70b-instruct",
             messages=[{"role": "user", "content": "Ping"}],
             max_tokens=10
         )
