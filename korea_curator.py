@@ -88,8 +88,14 @@ Format:
         curated = []
         pattern = re.compile(r'\{\s*"keyword"\s*:\s*"([^"]+)"\s*,\s*"title"\s*:\s*"([^"]+)"\s*,\s*"link"\s*:\s*"([^"]+)"\s*\}')
         for match in pattern.finditer(result_text):
-            kw = match.group(1).encode('utf-8').decode('unicode_escape')
-            title = match.group(2).encode('utf-8').decode('unicode_escape')
+            try:
+                kw = match.group(1).encode('utf-8').decode('unicode_escape').encode('latin1').decode('utf-8')
+            except:
+                kw = match.group(1)
+            try:
+                title = match.group(2).encode('utf-8').decode('unicode_escape').encode('latin1').decode('utf-8')
+            except:
+                title = match.group(2)
             link = match.group(3)
             curated.append({"keyword": kw, "title": title, "link": link})
         
