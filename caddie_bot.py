@@ -84,30 +84,24 @@ WRITING RULE FOR APEX NEWS (The "Late Apex" Strategy):
   Format: "[출처, 날짜] <URL|객관적 팩트 요약>" (If no URL, just "[출처, 날짜] 객관적 팩트 요약")
 - 지역화 (Localization) 우선순위:
   반드시 대한민국(South Korea)의 보안 사고, 공공/금융 규제, 기업 피해 사례를 최우선으로 탐색하여 맥락을 프레이밍하십시오. 국내 사례가 전혀 없을 경우에만 미국(US) 등 글로벌 사례로 넘어갑니다.
-- 오프닝 (Agent's Manifesto):
-  "F5 OOO입니다. 후속 통화 괜찮으십니까?"로 시작하는 기존 B2B 세일즈 톤의 에이전트 선언문을 기사 맥락에 맞춰 매일 조금씩 다르게 창작하십시오 (약 2~3문장). 이 오프닝은 깊고 건조한 목소리여야 합니다.
-- 심리적 후킹 및 맥락 (Hooking & Context):
-  절대 "미팅할 시간 되나요?", "어떻게 대응하고 있나요?" 같은 고객의 뇌 연산 부하를 요구하는 질문(Heavy 쿼리)을 던지지 마십시오.
-  대신, 기사의 위협과 관련하여 상용 SLA 보증이 없을 때 그 공백 기간 동안 사고가 발생하면 징계와 책임이 온전히 내부 인프라 및 보안 책임자에게 쏠리게 되는 현실(규제 감사 타깃 등)을 건조하게 짚어주십시오.
-  **[필수 지시]** 이 섹션에서 "독박", "면책", "알리바이"라는 날것의 단어 중 최소 1~2개를 반드시 문맥에 맞게 변주하여 직접 사용해야 합니다.
-- 무기 및 출구 전략 (Weapon & Exit Strategy) - "Risk Transfer":
-  미팅을 구걸하지 말고 "필요할 때 네가 호출해라"라며 통제권을 완전히 넘기십시오(Steering Wheel 이양). 
-  외부 감사 시 '선량한 관리자의 주의 의무'를 다했음을 기술적으로 증명하고 책임을 외부로 전가할 수 있는 **'1장짜리 내부 결재용 방어 로직(알리바이)'**을 남겨둔다고 명시하며 쿨하게 이탈하십시오.
-  **[필수 지시: Bait & Switch]** 하단에 제공하는 [무기]는 모든 것을 다 퍼주는 가이드가 아니라, 고객이 진짜 핵심 정보를 얻으려면 결국 파트너(벤더)에게 연락(Ping)할 수밖에 없도록 요약본(티저) 형태의 미끼를 던지는 뉘앙스로 작성하십시오.
-  위협(Threat)에 맞는 최적의 F5 솔루션(예: F5 WAF, F5 WAAP, F5 API Security, NGINX Plus 등 자율 매핑)을 유추하여 이 레퍼런스의 주체로 삼으십시오.
+- 섀도복싱 카운터 펀치 (Shadowboxing Counter Punch):
+  고정된 고객의 2가지 반발(의심)에 대해, 포퓰리즘 정치인처럼 거칠고 날것의 단어를 사용하여 뼈를 때리는 답변(카운터 펀치)을 창작하십시오. 우아할 필요 없이 이슈가 되도록, 논란을 감수하고서라도 강한 어조를 유지하십시오.
+  답변 1 타깃: "F5에서 제공한 자료 들이밀면 내부 감사가 방어 됩니까?" (면책, 알리바이, 가상 패치 SLA 등을 언급하며 '선량한 관리자의 의무'를 다했음을 증명한다는 논리 전개)
+  답변 2 타깃: "안 사도 여태껏 서버 안 터졌어" (상용 SLA 없는 오픈소스 불법 개조 상태의 독박 책임, 당장 내일 터졌을 때의 멱살잡이 공포를 거칠게 찌름)
+- 출구 전략 (Exit Strategy & Late Apex):
+  1장짜리 내부 결재용 방어 로직을 툭 던지며, "필요할 때 핑(Ping) 주십시오"라며 통제권을 쿨하게 넘기십시오. (아쉬운 척 매달리지 않음). 기사 위협에 맞는 F5 솔루션(F5 WAF, WAAP 등 자율 매핑)을 엮어 미끼(Bait) 형태로 구성하십시오.
 
 OUTPUT FORMAT:
 Output ONLY a valid JSON object. No markdown, no code blocks.
 
 {{
-  "manifesto": "Dynamically generated 2-3 sentence Agent's Manifesto for today's context.",
   "apex_news": [
     {{
       "keyword": "Short clear keyword",
       "entry": "[Source, Date] <URL|Heavy factual statement without fear mongering>",
-      "hooking_context": "Dry context about the risk of '독박' responsibility and regulatory audit target.",
-      "exit_strategy": "Cool exit offering a teaser/bait for the 1-page defense logic, forcing a Ping.",
-      "f5_reference": "Mapped F5 solution name (e.g. F5 WAAP 방어 로직 티저)"
+      "counter_1": "거칠고 뼈 때리는 카운터 펀치 답변 1",
+      "counter_2": "거칠고 뼈 때리는 카운터 펀치 답변 2",
+      "exit_strategy": "통제권을 넘기고 쿨하게 빠지는 출구 전략 멘트 (F5 솔루션명 포함)"
     }}
   ],
   "noise_news": [
@@ -138,11 +132,13 @@ Output ONLY a valid JSON object. No markdown, no code blocks.
         
         apex_list = parsed.get("apex_news", [])
         noise_list = parsed.get("noise_news", [])
-        manifesto_text = parsed.get("manifesto", "F5 OOO입니다. 후속으로 짧게 통화 괜찮으십니까?")
         
         main_messages = []
         
-        manifesto = f"*[Agent's Manifesto]*\n에이펙스: (깊은 목소리로) \"{manifesto_text}\"\n"
+        manifesto = """*[Agent's Manifesto]*
+(차량 하중을 프론트 타이어에 눌러 담는 그립을 위한 브레이킹 스킬) 낮은 톤의 목소리나 경쟁사 정보라는 무기도 물론 중요하지만,
+그 모든 전략이 완성되는 **가장 핵심적인 승부처(하이라이트)**는 바로 "아쉬운 척 매달리지 않고 (무에서 찰나의 타이밍 만들어 냄, 스티어링 휠 꺾은 뒤 코너 탈출), 통제권을 넘긴 뒤 쿨하게 빠지는 태도 (엔진 출력을 폭발시켜야 하는 핵심 가속 구간)".
+"""
         main_messages.append(manifesto)
 
         for item in apex_list:
@@ -150,14 +146,19 @@ Output ONLY a valid JSON object. No markdown, no code blocks.
             if not keyword: continue
             
             block = f"""[51% INSIGHT] {keyword}
-- 진입: {item.get('entry', '')}
 
-{item.get('hooking_context', '')}
+🏎️ *[진입: 뉴스 팩트 투척]*
+- {item.get('entry', '')}
 
-{item.get('exit_strategy', '')}
+🛑 *[브레이킹 포인트: 반발과 섀도복싱]*
+*Q1: "F5에서 제공한 자료 들이밀면 내부 감사가 방어 됩니까?"*
+  👉 {item.get('counter_1', '')}
 
+*Q2: "안 사도 여태껏 서버 안 터졌어"*
+  👉 {item.get('counter_2', '')}
 
-- 무기: {item.get('f5_reference', '')}"""
+🔥 *[Late Apex & 스티어링 최대 조향: 통제권 이양 및 출구 전략]*
+- {item.get('exit_strategy', '')}"""
             main_messages.append(block)
             
         if len(main_messages) > 1:
