@@ -119,7 +119,7 @@ Output ONLY a valid JSON object. No markdown, no code blocks.
     
     try:
         response = client.chat.completions.create(
-            model="meta/llama-3.2-90b-vision-instruct",
+            model="meta/llama-3.2-11b-vision-instruct",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1500,
             temperature=0.3

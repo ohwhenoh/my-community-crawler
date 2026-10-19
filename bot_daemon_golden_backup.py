@@ -29,7 +29,7 @@ def run_health_check(say, user):
         try:
             client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=6.0, max_retries=0)
             client.chat.completions.create(
-                model="nvidia/llama-3.1-nemotron-70b-instruct",
+                model="meta/llama-3.2-11b-vision-instruct",
                 messages=[{"role": "user", "content": "Ping"}],
                 max_tokens=10
             )
@@ -95,7 +95,7 @@ def chat_with_llm(say, user, text):
     try:
         client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=15.0, max_retries=1)
         response = client.chat.completions.create(
-            model="nvidia/llama-3.1-nemotron-70b-instruct",
+            model="meta/llama-3.2-11b-vision-instruct",
             messages=[
                 {"role": "system", "content": "당신은 F5 네트워크 보안 세일즈를 돕는 똑똑한 AI 비서 'MacPro DR Bot'입니다. 사용자의 질문에 자연스럽고 친절하게 한국어로 대답해주세요. 만약 시스템 상태나 헬스를 물어보면 '상태조회' 명령어를, 세일즈 리포트를 원하면 '타깃분석' 명령어를 타이핑해 달라고 안내해 주세요."},
                 {"role": "user", "content": text}
