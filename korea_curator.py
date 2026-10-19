@@ -84,10 +84,14 @@ Format:
     except json.JSONDecodeError as e:
         print(f"JSON Parse error: {e}. Attempting regex fallback.")
         import re
+        import codecs
         curated = []
         pattern = re.compile(r'\{\s*"keyword"\s*:\s*"([^"]+)"\s*,\s*"title"\s*:\s*"([^"]+)"\s*,\s*"link"\s*:\s*"([^"]+)"\s*\}')
         for match in pattern.finditer(result_text):
-            curated.append({"keyword": match.group(1), "title": match.group(2), "link": match.group(3)})
+            kw = codecs.decode(match.group(1), 'unicode_escape')
+            title = codecs.decode(match.group(2), 'unicode_escape')
+            link = codecs.decode(match.group(3), 'unicode_escape')
+            curated.append({"keyword": kw, "title": title, "link": link})
         
     try:
         if not curated: return ""
