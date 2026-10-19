@@ -92,12 +92,21 @@ Format:
     try:
         if not curated: return ""
         
-        output = "\n\n*[오늘의 경쟁사 및 핫 트렌드 모니터링]*\n\n"
-        for idx, item in enumerate(curated):
-            keyword = item.get("keyword", "트렌드")
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        for item in curated:
+            kw = item.get("keyword", "트렌드")
             title = item.get("title", "").replace('\n', ' ')
             link = item.get("link", "")
-            output += f"키워드: {keyword}\n기사: <{link}|{title}>\n\n"
+            grouped[kw].append(f"• <{link}|{title}>")
+            
+        output = "\n\n*[오늘의 경쟁사 및 핫 트렌드 모니터링]*\n\n"
+        for kw, articles in grouped.items():
+            output += f"키워드: {kw}\n"
+            for article in articles:
+                output += f"{article}\n"
+            output += "\n"
+            
         return output.strip() + "\n"
     except Exception as e:
         print(f"JSON Parse error: {e}")
