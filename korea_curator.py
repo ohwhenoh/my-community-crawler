@@ -98,6 +98,15 @@ Format:
                 title = json.loads('"' + raw_title + '"')
             except:
                 title = match.group(2)
+            
+            # Final fallback: replace literal unicode strings left behind by LLM's broken parsing
+            if '\\u' in title:
+                import codecs
+                title = codecs.decode(title.replace('\\u', '\\\\u'), 'unicode_escape')
+            if '\\u' in kw:
+                import codecs
+                kw = codecs.decode(kw.replace('\\u', '\\\\u'), 'unicode_escape')
+                
             link = match.group(3)
             curated.append({"keyword": kw, "title": title, "link": link})
         
