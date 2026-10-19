@@ -699,6 +699,12 @@ def send_to_slack(message, target_company="타깃 기업"):
     })
         
     payload = {"text": "F5 세일즈 리포트 도착", "blocks": blocks}
+    
+    # [E2E Rule] 페이로드 전체 프린트 강제
+    print("\n--- [E2E Payload Full Print] ---")
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    print("--------------------------------\n")
+    
     data = json.dumps(payload).encode('utf-8')
     
     try:
