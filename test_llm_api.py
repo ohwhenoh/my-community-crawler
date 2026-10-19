@@ -7,7 +7,7 @@ def test():
     try:
         client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=nvidia_key, timeout=5.0, max_retries=1)
         response = client.chat.completions.create(
-            model="meta/llama-3.1-70b-instruct",
+            model="nvidia/llama-3.1-nemotron-70b-instruct",
             messages=[{"role": "user", "content": "안녕"}],
             max_tokens=10
         )
