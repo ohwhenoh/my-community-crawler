@@ -184,6 +184,14 @@ def get_b2b_sales_report():
                 return (meta['regularMarketPrice'] / meta['chartPreviousClose'] - 1) * 100
         except: pass
         return 0.0
+        
+    def get_vix():
+        try:
+            res = requests.get("https://query1.finance.yahoo.com/v8/finance/chart/^VIX", headers={'User-Agent': 'Mozilla/5.0'}, timeout=5)
+            if res.status_code == 200:
+                return float(res.json()['chart']['result'][0]['meta']['regularMarketPrice'])
+        except: pass
+        return 0.0
 
     us_avg = (get_index_change('^IXIC') + get_index_change('^GSPC')) / 2
     cn_avg = (get_index_change('000001.SS') + get_index_change('^HSI')) / 2
@@ -192,12 +200,18 @@ def get_b2b_sales_report():
     my_idx = get_index_change('^KLSE')
     id_idx = get_index_change('^JKSE')
     tw_idx = get_index_change('^TWII')
+    vix_val = get_vix()
     
     def gc(val): return "🟢" if val > 0 else "🔴"
     
     report = f"🔄 *[글로벌 B2B 매력도 분석]*\n기준: {datetime.now(timezone(timedelta(hours=9))).strftime('%y-%m-%d')} | 3개월 전 대비\n\n"
     report += f"📊 *글로벌 증시 전광판* (Top 기업 대용 지수)\n"
-    report += f"🇺🇸 미국 (나스닥/S&P500 평균): {gc(us_avg)} {us_avg:+.2f}%\n"
+    
+    us_status = f"{gc(us_avg)} {us_avg:+.2f}%"
+    if vix_val >= 20.0 or us_yield >= 4.5:
+        us_status = f"🔴 진입 금지 (VIX: {vix_val:.1f} / 10Y: {us_yield:.2f}%)"
+        
+    report += f"🇺🇸 미국 (나스닥/S&P500 평균): {us_status}\n" 
     report += f"🇨🇳 중국 (상해/항셍 평균): {gc(cn_avg)} {cn_avg:+.2f}%\n"
     report += f"🇰🇷 한국 (KOSPI): {gc(kr_idx)} {kr_idx:+.2f}%\n"
     report += f"🇸🇬 싱가포르 (STI): {gc(sg_idx)} {sg_idx:+.2f}%\n"
@@ -425,10 +439,15 @@ def send_slack():
     
     for cat_name in ["글로벌 경제", "라이프/헬스"]:
         if trends_by_category[cat_name]:
-            trends_blocks.append({
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": f"*{cat_name}*\n" + "\n".join(trends_by_category[cat_name])}
-            })
+            items = trends_by_category[cat_name]
+            chunk_size = 10  # 3000자 제한 방지
+            for i in range(0, len(items), chunk_size):
+                chunk = items[i:i + chunk_size]
+                header_text = f"*{cat_name}*" if i == 0 else f"*{cat_name}* (계속)"
+                trends_blocks.append({
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": header_text + "\n" + "\n".join(chunk)}
+                })
 
     from collections import Counter
     stopwords = set([
