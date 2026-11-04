@@ -396,19 +396,25 @@ def send_slack():
     summarized_all = summarize_all_trends(all_trends)
 
     
-    trends_by_geo = {}
+    # S22 Ultra에 맞게 글로벌 경제 / 라이프 헬스로 카테고리화
+    trends_by_category = {"글로벌 경제": [], "라이프/헬스": []}
+    
+    geo_short = {
+        "South Korea": "KR", "Singapore": "SG", "Netherlands": "NL",
+        "Hong Kong": "HK", "Switzerland": "CH", "Israel": "IL",
+        "Japan": "JP", "California (US)": "US"
+    }
+
     for t in summarized_all:
-        g = t['geo_name']
-        if g not in trends_by_geo: trends_by_geo[g] = []
+        cat = t.get('category', '글로벌 경제')
+        g = geo_short.get(t['geo_name'], t['geo_name'])
         kw = t["keyword"]
-        traf = t["traffic"]
         s_link = t["search_link"]
         summary = t["summary"]
         top_news_url = t["news"][0]["url"] if t["news"] else s_link
         
-        # 갤럭시 S22 울트라 화면에 맞춘 모바일 UI 최적화
-        # Guardrail 우회를 위한 더미 포맷 문자열: "• <{link}|{title}>"
-        trends_by_geo[g].append(f"• <{s_link}|*{kw}*>: <{top_news_url}|{summary}> ({traf}+)")
+        # S22 모바일 화면 최적화: [국가] 키워드링크: 요약링크
+        trends_by_category[cat].append(f"• [{g}] <{s_link}|*{kw}*>: <{top_news_url}|{summary}>")
 
     trends_blocks = [
         {
@@ -416,11 +422,12 @@ def send_slack():
             "text": {"type": "plain_text", "text": "🌐 글로벌 이슈 트래킹"}
         }
     ]
-    for name in geos.keys():
-        if name in trends_by_geo:
+    
+    for cat_name in ["글로벌 경제", "라이프/헬스"]:
+        if trends_by_category[cat_name]:
             trends_blocks.append({
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"*{name}*\n" + "\n".join(trends_by_geo[name])}
+                "text": {"type": "mrkdwn", "text": f"*{cat_name}*\n" + "\n".join(trends_by_category[cat_name])}
             })
 
     from collections import Counter
