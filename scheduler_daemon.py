@@ -13,38 +13,21 @@ def run_haerang_job():
         print(f"해랑 열차 크롤러 에러: {e}", flush=True)
 
 def run_scraper_job():
-    """
-    Executes crawler_slack.py as a subprocess and logs output.
-    """
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 스케줄러: 실시간 OSINT 크롤러 기동 시작...", flush=True)
-    try:
-        # Run using python3
-        res = subprocess.run(
-            [sys.executable, "crawler_slack.py"],
-            capture_output=True,
-            text=True
-        )
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 스케줄러: 크롤러 실행 완료 (Exit Code: {res.returncode})", flush=True)
-        if res.stdout:
-            print(f"--- 크롤러 출력 (STDOUT) ---\n{res.stdout.strip()}", flush=True)
-        if res.stderr:
-            print(f"--- 크롤러 오류 (STDERR) ---\n{res.stderr.strip()}", flush=True)
-    except Exception as e:
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 스케줄러 실행 에러: {str(e)}", flush=True)
+    print("레거시 크롤러(crawler_slack.py)는 경량화 정책으로 인해 비활성화되었습니다.", flush=True)
 
 
 
 
 def run_caddie_bot_job():
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 챔피언 캐디 봇: 51% 필터링 모닝/오후 브리핑 기동...", flush=True)
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] slack_pusher (경량 B2B/트렌드) 기동...", flush=True)
     try:
-        res = subprocess.run([sys.executable, "caddie_bot.py"], capture_output=True, text=True)
+        res = subprocess.run([sys.executable, "slack_pusher.py"], capture_output=True, text=True)
         if res.stdout:
-            print(f"--- 캐디봇 STDOUT ---\n{res.stdout.strip()}", flush=True)
+            print(f"--- slack_pusher STDOUT ---\n{res.stdout.strip()}", flush=True)
         if res.stderr:
-            print(f"--- 캐디봇 STDERR ---\n{res.stderr.strip()}", flush=True)
+            print(f"--- slack_pusher STDERR ---\n{res.stderr.strip()}", flush=True)
     except Exception as e:
-        print(f"캐디 봇 에러: {e}", flush=True)
+        print(f"slack_pusher 에러: {e}", flush=True)
 
 def run_backup_job():
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 스케줄러: 일일 데이터 백업 기동 시작...", flush=True)
@@ -81,7 +64,7 @@ if __name__ == "__main__":
     is_dr = os.environ.get("IS_DR_NODE") == "True"
     
     # Crawler runs periodically to feed the raw dump (e.g., every few hours)
-    crawler_trigger_times = ["01:00", "05:00", "09:00", "13:00", "15:00", "19:00"]
+    crawler_trigger_times = ["07:10", "16:00", "23:00"]
     
     if is_dr:
         print("🔧 [DR 모드] 라즈베리파이 백업 노드로 기동되었습니다.", flush=True)
