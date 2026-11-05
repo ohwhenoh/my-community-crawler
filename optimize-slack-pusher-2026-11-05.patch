@@ -1,0 +1,156 @@
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..98e34fa
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,10 @@
++# 호스트마다 이 파일을 복사해 .env 파일로 만든다. 값은 호스트마다 다르게 준다.
++# 라즈베리파이(백업 노드): IS_DR_NODE=True, ENABLE_SLACK_PUSH=false
++# 락스다 엑스포(푸시 담당): IS_DR_NODE=False, ENABLE_SLACK_PUSH=true
++IS_DR_NODE=True
++ENABLE_SLACK_PUSH=false
++SLACK_WEBHOOK_URL=
++SLACK_BOT_TOKEN=
++SLACK_APP_TOKEN=
++EODHD_API_KEY=
++FRED_API_KEY=
+diff --git a/.github/workflows/docker-publish.yml b/.github/workflows/docker-publish.yml
+index a044ee1..c64137d 100644
+--- a/.github/workflows/docker-publish.yml
++++ b/.github/workflows/docker-publish.yml
+@@ -42,7 +42,7 @@ jobs:
+         uses: docker/build-push-action@v5
+         with:
+           context: .
+-          platforms: linux/arm64
++          platforms: linux/amd64,linux/arm64
+           push: true
+           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+           labels: ${{ steps.meta.outputs.labels }}
+diff --git a/Dockerfile b/Dockerfile
+index bf194ed..59a1c94 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -20,7 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
+ COPY requirements.txt .
+ 
+ RUN pip install --no-cache-dir -r requirements.txt
+-RUN playwright install --with-deps chromium
++# 플레이 라이트는 오래된 스크래퍼에서만 쓰므로, 기본 이미지에서는 빼서 가볍게 한다.
++# 동적 스크래핑이 필요하면 별도 이미지에서 설치한다.
+ 
+ 
+ # Copy application source files
+diff --git a/Dockerfile.pusher b/Dockerfile.pusher
+new file mode 100644
+index 0000000..3c4914e
+--- /dev/null
++++ b/Dockerfile.pusher
+@@ -0,0 +1,11 @@
++# 슬랙 푸셔 전용 가벼운 이미지. 플레이 라이트와 크로미움을 넣지 않는다.
++FROM python:3.11-slim
++ENV PYTHONDONTWRITEBYTECODE=1
++ENV PYTHONUNBUFFERED=1
++ENV TZ=Asia/Seoul
++WORKDIR /app
++RUN apt-get update && apt-get install -y --no-install-recommends tzdata && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && rm -rf /var/lib/apt/lists/*
++COPY requirements-pusher.txt .
++RUN pip install --no-cache-dir -r requirements-pusher.txt
++COPY slack_pusher.py .
++CMD ["python", "-u", "slack_pusher.py"]
+diff --git a/docker-compose.yml b/docker-compose.yml
+index b9ee8a5..627ab29 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -7,7 +7,8 @@ services:
+     env_file:
+       - .env
+     environment:
+-      - IS_DR_NODE=True
++      - IS_DR_NODE=${IS_DR_NODE:-True}
++      - ENABLE_SLACK_PUSH=${ENABLE_SLACK_PUSH:-false}
+     volumes:
+       - ./.env:/app/.env:ro
+       - ./data:/app/data
+diff --git a/requirements-pusher.txt b/requirements-pusher.txt
+new file mode 100644
+index 0000000..2c24336
+--- /dev/null
++++ b/requirements-pusher.txt
+@@ -0,0 +1 @@
++requests==2.31.0
+diff --git a/scheduler_daemon.py b/scheduler_daemon.py
+index 20762a9..67cdc6e 100644
+--- a/scheduler_daemon.py
++++ b/scheduler_daemon.py
+@@ -1,3 +1,4 @@
++import os
+ import time
+ import subprocess
+ import sys
+@@ -18,7 +19,14 @@ def run_scraper_job():
+ 
+ 
+ 
++# 푸시 담당 호스트만 True로 한다. 라즈베리파이(백업 노드)는 False로 둔다.
++# 호스트마다 .env 파일에서 ENABLE_SLACK_PUSH 값을 다르게 준다.
++ENABLE_SLACK_PUSH = os.environ.get("ENABLE_SLACK_PUSH", "false").lower() in ("1", "true", "yes")
++
+ def run_caddie_bot_job():
++    if not ENABLE_SLACK_PUSH:
++        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] slack_pusher 건너뜀: 이 호스트는 푸시 담당이 아닙니다 (ENABLE_SLACK_PUSH=false).", flush=True)
++        return
+     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] slack_pusher (경량 B2B/트렌드) 기동...", flush=True)
+     try:
+         res = subprocess.run([sys.executable, "slack_pusher.py"], capture_output=True, text=True)
+diff --git a/slack_pusher.py b/slack_pusher.py
+index 01f7ccb..0ba6f13 100644
+--- a/slack_pusher.py
++++ b/slack_pusher.py
+@@ -1,7 +1,6 @@
+ import os
+ import json
+ import requests
+-import base64
+ 
+ import xml.etree.ElementTree as ET
+ from datetime import datetime, timezone, timedelta
+@@ -21,17 +20,15 @@ def load_env():
+ load_env()
+ 
+ def get_slack_webhook():
+-    env_url = os.environ.get("SLACK_WEBHOOK_URL", "")
+-    if env_url: return env_url
+-    fallback_b64 = "aHR0cHM6Ly9ob29rcy5zbGFjay5jb20vc2VydmljZXMvVDA5ODVFVlNKU1MvQjBDOFU1NFVLTlYvM0xqWEwxV2kyWE4wN1BOWHNxd3IyN0hq"
+-    try:
+-        return base64.b64decode(fallback_b64).decode("utf-8")
+-    except:
+-        return ""
++    # 보안: 웹훅 주소는 환경 변수에서만 읽는다. 코드 안에 대체값을 두지 않는다.
++    # 슬랙에서 기존 웹훅을 폐기하고 새 주소를 발급한 뒤, .env 파일에 SLACK_WEBHOOK_URL로 넣는다.
++    return os.environ.get("SLACK_WEBHOOK_URL", "").strip()
+ 
+ SLACK_WEBHOOK_URL = get_slack_webhook()
+-HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sent_history.json")
+-CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yield_cache.json")
++HISTORY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
++HISTORY_FILE = os.path.join(HISTORY_DIR, "sent_history.json")
++CACHE_FILE = os.path.join(HISTORY_DIR, "yield_cache.json")
++os.makedirs(HISTORY_DIR, exist_ok=True)
+ 
+ def load_history():
+     if os.path.exists(HISTORY_FILE):
+@@ -409,6 +406,13 @@ def send_slack():
+     all_trends = filter_trends_by_keywords(all_trends)
+     summarized_all = summarize_all_trends(all_trends)
+ 
++    # 중복 방지: 이미 보낸 뉴스 주소는 다시 보내지 않는다.
++    # sent_history.json은 data 폴더에 두어 컨테이너가 다시 떠도 남는다.
++    summarized_all = [
++        t for t in summarized_all
++        if not t.get("news") or t["news"][0].get("url") not in SENT_URLS
++    ]
++
+     
+     # S22 Ultra에 맞게 글로벌 경제 / 라이프 헬스로 카테고리화
+     trends_by_category = {"글로벌 경제": [], "라이프/헬스": []}

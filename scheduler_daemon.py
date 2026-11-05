@@ -1,3 +1,4 @@
+import os
 import time
 import subprocess
 import sys
@@ -18,7 +19,14 @@ def run_scraper_job():
 
 
 
+# 푸시 담당 호스트만 True로 한다. 라즈베리파이(백업 노드)는 False로 둔다.
+# 호스트마다 .env 파일에서 ENABLE_SLACK_PUSH 값을 다르게 준다.
+ENABLE_SLACK_PUSH = os.environ.get("ENABLE_SLACK_PUSH", "false").lower() in ("1", "true", "yes")
+
 def run_caddie_bot_job():
+    if not ENABLE_SLACK_PUSH:
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] slack_pusher 건너뜀: 이 호스트는 푸시 담당이 아닙니다 (ENABLE_SLACK_PUSH=false).", flush=True)
+        return
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] slack_pusher (경량 B2B/트렌드) 기동...", flush=True)
     try:
         res = subprocess.run([sys.executable, "slack_pusher.py"], capture_output=True, text=True)

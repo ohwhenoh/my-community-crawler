@@ -1,7 +1,6 @@
 import os
 import json
 import requests
-import base64
 
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
@@ -21,17 +20,15 @@ def load_env():
 load_env()
 
 def get_slack_webhook():
-    env_url = os.environ.get("SLACK_WEBHOOK_URL", "")
-    if env_url: return env_url
-    fallback_b64 = "aHR0cHM6Ly9ob29rcy5zbGFjay5jb20vc2VydmljZXMvVDA5ODVFVlNKU1MvQjBDOFU1NFVLTlYvM0xqWEwxV2kyWE4wN1BOWHNxd3IyN0hq"
-    try:
-        return base64.b64decode(fallback_b64).decode("utf-8")
-    except:
-        return ""
+    # 보안: 웹훅 주소는 환경 변수에서만 읽는다. 코드 안에 대체값을 두지 않는다.
+    # 슬랙에서 기존 웹훅을 폐기하고 새 주소를 발급한 뒤, .env 파일에 SLACK_WEBHOOK_URL로 넣는다.
+    return os.environ.get("SLACK_WEBHOOK_URL", "").strip()
 
 SLACK_WEBHOOK_URL = get_slack_webhook()
-HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sent_history.json")
-CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yield_cache.json")
+HISTORY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+HISTORY_FILE = os.path.join(HISTORY_DIR, "sent_history.json")
+CACHE_FILE = os.path.join(HISTORY_DIR, "yield_cache.json")
+os.makedirs(HISTORY_DIR, exist_ok=True)
 
 def load_history():
     if os.path.exists(HISTORY_FILE):
@@ -408,6 +405,13 @@ def send_slack():
     
     all_trends = filter_trends_by_keywords(all_trends)
     summarized_all = summarize_all_trends(all_trends)
+
+    # 중복 방지: 이미 보낸 뉴스 주소는 다시 보내지 않는다.
+    # sent_history.json은 data 폴더에 두어 컨테이너가 다시 떠도 남는다.
+    summarized_all = [
+        t for t in summarized_all
+        if not t.get("news") or t["news"][0].get("url") not in SENT_URLS
+    ]
 
     
     # S22 Ultra에 맞게 글로벌 경제 / 라이프 헬스로 카테고리화

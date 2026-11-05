@@ -7,7 +7,8 @@ services:
     env_file:
       - .env
     environment:
-      - IS_DR_NODE=True
+      - IS_DR_NODE=${IS_DR_NODE:-True}
+      - ENABLE_SLACK_PUSH=${ENABLE_SLACK_PUSH:-false}
     volumes:
       - ./.env:/app/.env:ro
       - ./data:/app/data
