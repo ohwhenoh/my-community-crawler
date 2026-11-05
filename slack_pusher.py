@@ -30,6 +30,11 @@ HISTORY_FILE = os.path.join(HISTORY_DIR, "sent_history.json")
 CACHE_FILE = os.path.join(HISTORY_DIR, "yield_cache.json")
 os.makedirs(HISTORY_DIR, exist_ok=True)
 
+# 출처 추적: get_te_yield()가 마지막으로 쓴 출처/날짜를 나라별로 기록한다.
+# (값, 캐시날짜) 반환 형태를 바꾸지 않기 위해 별도 사전에 둔다.
+YIELD_SOURCE = {}
+FX_META = {"fx_date": "", "hist_date": ""}
+
 def load_history():
     if os.path.exists(HISTORY_FILE):
         try:
@@ -77,10 +82,14 @@ def get_te_yield(country_path):
                 if res.status_code == 200:
                     data = res.json()
                     close_val = data.get("close")
-                    if close_val and close_val != "NA": val = float(close_val)
+                    if close_val and close_val != "NA":
+                        val = float(close_val)
+                        YIELD_SOURCE[country_path] = ("EODHD 실시간", datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d"))
                     else:
                         prev = data.get("previousClose")
-                        if prev and prev != "NA": val = float(prev)
+                        if prev and prev != "NA":
+                            val = float(prev)
+                            YIELD_SOURCE[country_path] = ("EODHD 실시간", datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d"))
             except: pass
 
     if val is None and country_path == "united-states" and os.environ.get("FRED_API_KEY"):
@@ -91,6 +100,7 @@ def get_te_yield(country_path):
             data = res.json()
             if "observations" in data and len(data["observations"]) > 0:
                 val = float(data["observations"][0]["value"])
+                YIELD_SOURCE[country_path] = ("FRED 일간", str(data["observations"][0].get("date", "")))
         except: pass
 
     if val is None:
@@ -109,10 +119,14 @@ def get_te_yield(country_path):
                 res = requests.get(url, headers=headers, timeout=10)
                 if res.status_code == 200:
                     m = re.search(r'QuoteStrip-lastPrice"[^>]*>([\d\.]+)', res.text)
-                    if m: val = float(m.group(1))
+                    if m:
+                        val = float(m.group(1))
+                        YIELD_SOURCE[country_path] = ("CNBC 현재값", datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d"))
             except: pass
 
     if val is not None:
+        if country_path not in YIELD_SOURCE:
+            YIELD_SOURCE[country_path] = ("실시간", datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d"))
         cache_data[country_path] = {"value": val, "date": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M")}
         try:
             with open(CACHE_FILE, "w", encoding="utf-8") as f:
@@ -121,12 +135,18 @@ def get_te_yield(country_path):
         return val, False
     else:
         if country_path in cache_data:
-            return cache_data[country_path]["value"], cache_data[country_path]["date"]
-        fallbacks = {
-            "united-states": 5.23, "china": 1.70, "south-korea": 4.39,
-            "japan": 3.02, "malaysia": 3.96, "euro-area": 4.09
-        }
-        return fallbacks.get(country_path, 0.0), "오래된 캐시"
+            # 8일 넘게 묵은 캐시는 쓰지 않는다. 낡은 값이 조용히 들어가는 것을 막는다.
+            try:
+                cached_date = datetime.strptime(str(cache_data[country_path]["date"])[:10], "%Y-%m-%d").date()
+                age_days = (datetime.now(timezone(timedelta(hours=9))).date() - cached_date).days
+            except Exception:
+                age_days = 999
+            if age_days <= 8:
+                YIELD_SOURCE[country_path] = ("캐시", str(cache_data[country_path]["date"]))
+                return cache_data[country_path]["value"], cache_data[country_path]["date"]
+        # 낡은 기본값은 쓰지 않는다. 출처가 실패하면 자료 없음으로 표시한다.
+        YIELD_SOURCE[country_path] = ("자료 없음", "")
+        return 0.0, "자료 없음"
 
 def get_frankfurter_fx():
     base = "USD"
@@ -135,15 +155,18 @@ def get_frankfurter_fx():
         now = datetime.now(timezone(timedelta(hours=9)))
         three_months_ago = now - timedelta(days=90)
         
-        current_res = requests.get(f"https://api.frankfurter.app/latest?from={base}&to={','.join(symbols)}", timeout=10)
-        current_data = current_res.json().get('rates', {})
+        current_res = requests.get(f"https://api.frankfurter.dev/v1/latest?from={base}&to={','.join(symbols)}", timeout=10)
+        _cur_json = current_res.json()
+        current_data = _cur_json.get('rates', {})
+        FX_META["fx_date"] = str(_cur_json.get('date', ''))
         
         hist_date = three_months_ago.strftime("%Y-%m-%d")
         if three_months_ago.weekday() >= 5:
             hist_date = (three_months_ago - timedelta(days=three_months_ago.weekday() - 4)).strftime("%Y-%m-%d")
             
-        hist_res = requests.get(f"https://api.frankfurter.app/{hist_date}?from={base}&to={','.join(symbols)}", timeout=10)
+        hist_res = requests.get(f"https://api.frankfurter.dev/v1/{hist_date}?from={base}&to={','.join(symbols)}", timeout=10)
         hist_data = hist_res.json().get('rates', {})
+        FX_META["hist_date"] = hist_date
         
         return current_data, hist_data
     except:
@@ -201,8 +224,11 @@ def get_b2b_sales_report():
     
     def gc(val): return "🟢" if val > 0 else "🔴"
     
-    report = f"🔄 *[글로벌 B2B 매력도 분석]*\n기준: {datetime.now(timezone(timedelta(hours=9))).strftime('%y-%m-%d')} | 3개월 전 대비\n\n"
+    _fx_date = FX_META.get("fx_date") or "날짜 미상"
+    report = f"🔄 *[글로벌 B2B 매력도 분석]*\n기준: {datetime.now(timezone(timedelta(hours=9))).strftime('%y-%m-%d')} | 환율 3개월 전 대비 (유럽중앙은행 고시 {_fx_date}) | 판정은 자체 규칙, 투자 신호 아님\n\n"
     report += f"📊 *글로벌 증시 전광판* (Top 기업 대용 지수)\n"
+    _us_src = YIELD_SOURCE.get("united-states", ("자료 없음", ""))
+    report += f"미국 10년 금리: {us_yield:.2f}% ({_us_src[0]}{' ' + _us_src[1] if _us_src[1] else ''})\n"
     
     us_status = f"{gc(us_avg)} {us_avg:+.2f}%"
     if vix_val >= 20.0 or us_yield >= 4.5:
@@ -217,10 +243,14 @@ def get_b2b_sales_report():
     report += f"🇹🇼 대만 (TAIEX): {gc(tw_idx)} {tw_idx:+.2f}%\n"
     report += f"_(참고: 🟢 초록=상승/좋음, 🔴 빨강=하락/나쁨 - 서양식 기준)_\n\n"
     
+    missing_yields = []
     for c in countries:
         local_yield_data = get_te_yield(c["te_path"])
         local_yield, local_cache_date = local_yield_data if local_yield_data else (0.0, False)
-        if local_cache_date: has_cache = True
+        if local_cache_date and local_cache_date != "자료 없음": has_cache = True
+        if local_yield == 0.0 or local_cache_date == "자료 없음":
+            missing_yields.append(c["name"])
+            continue
         
         sym = c["sym"]
         cfx = curr_fx.get(sym, 0)
@@ -248,11 +278,17 @@ def get_b2b_sales_report():
         cache_warn = f" (⚠️캐시)" if local_cache_date else ""
         
         # 갤럭시 S22 울트라 화면에 맞춘 모바일 UI 최적화
+        _local_src = YIELD_SOURCE.get(c["te_path"], ("자료 없음", ""))
+        _local_src_txt = f"{_local_src[0]}{' ' + _local_src[1] if _local_src[1] else ''}"
+        _us_src_txt = f"{_us_src[0]}{' ' + _us_src[1] if _us_src[1] else ''}"
+        _spread_contrib = spread * -1.0
         report += f"\n{c['flag']} *{c['name']} ({sym})*{cache_warn}\n"
-        report += f" • 환율: {cfx:,.4f} ({trend_word} {abs(raw_fx_change):.2f}%)\n"
-        report += f" • 금리: 🇺🇸{us_yield:.2f}% vs {c['flag']}{local_yield:.2f}%\n"
-        report += f" • 판정: {status} [{final_score:+.2f}%]\n"
+        report += f" • 환율: {cfx:,.4f} (3개월 전 대비 {trend_word} {abs(raw_fx_change):.2f}%, 유럽중앙은행 고시 {_fx_date})\n"
+        report += f" • 금리: 🇺🇸{us_yield:.2f}% ({_us_src_txt}) vs {c['flag']}{local_yield:.2f}% ({_local_src_txt})\n"
+        report += f" • 판정: {status} [{final_score:+.2f}%: 환율 {fx_gain_score:+.2f}, 금리차 {_spread_contrib:+.2f}] — 자체 규칙, 투자 신호 아님\n"
         
+    if missing_yields:
+        report += f"\n금리 자료 없음: {', '.join(missing_yields)} (출처 실패, 기본값 사용 안 함)\n"
     if has_cache:
         report = report.replace("🔄 *[글로벌 B2B 매력도 분석]*", "🔄 *[글로벌 B2B 매력도 분석]*\n🚨 *[주의: API 통신 장애로 일부 국가의 경우 최근 캐시 데이터가 반영되었습니다]*")
         
@@ -284,38 +320,63 @@ TARGET_KEYWORDS = [
 
 import re
 
+# 라이프/헬스 분류 키워드 (코드 안에 명시한다. 분류가 안 되면 글로벌 경제로 보낸다.)
+LIFE_HEALTH_KEYWORDS = [
+    "건강", "의료", "치료제", "신약", "백신", "병원", "식품의약품청", "암", "질병",
+    "혈우병", "백질이영양증", "치료", "의사", "운동",
+    "health", "medical", "medicine", "drug", "vaccine", "hospital", "disease",
+    "cancer", "mental health", "fitness", "doctor", "pharma", "clinical",
+]
+
+def classify_trend_category(t):
+    text = (t.get("keyword", "") + " " + t.get("summary", "") + " " + " ".join([n.get("title", "") for n in t.get("news", [])])).lower()
+    for k in LIFE_HEALTH_KEYWORDS:
+        if k.lower() in text:
+            return "라이프/헬스"
+    return "글로벌 경제"
+
 def filter_trends_by_keywords(trends_list):
     filtered = []
     for t in trends_list:
         text_to_search = (t["keyword"] + " " + " ".join([n["title"] for n in t.get("news", [])])).lower()
-        
-        # 비영어/비한국어 꼼수 필터링
-        if re.search(r'[À-ÿœæøåß]', text_to_search):
-            continue
-        foreign_stop = [r'\bhet\b', r'\been\b', r'\bbij\b', r'\bund\b', r'\boder\b', r'\bel\b', r'\bla\b', r'\blos\b', r'\blas\b', r'\bpara\b', r'\bcryptobeurs\b']
-        is_foreign = False
-        for fw in foreign_stop:
-            if re.search(fw, text_to_search):
-                is_foreign = True
-                break
-        if is_foreign: continue
-
-        matched = False
+        # 키워드 매칭을 먼저 한다. 언어 자체를 빼지 않는다.
+        matched_keys = []
         for k in TARGET_KEYWORDS:
             k_lower = k.lower()
             if re.search(r'[a-z]', k_lower):
-                # 영문 키워드는 단어 단위 매칭 (word boundary)
                 if re.search(rf'\b{re.escape(k_lower)}\b', text_to_search):
-                    matched = True
-                    break
+                    matched_keys.append(k_lower)
             else:
-                # 한글 키워드는 부분 일치 허용
                 if k_lower in text_to_search:
-                    matched = True
-                    break
-        if matched:
-            filtered.append(t)
+                    matched_keys.append(k_lower)
+        if not matched_keys:
+            continue
+        # 외국어 차단은 약하게: 강한 키워드(한글이거나 4자 초과)가 있으면 남기고,
+        # 짧고 흔한 영문 단어만으로 걸린 경우에만 외국어 흔적 단어가 있으면 뺀다.
+        foreign_stop = [r'\bhet\b', r'\been\b', r'\bbij\b', r'\bund\b', r'\boder\b', r'\bel\b', r'\bla\b', r'\blos\b', r'\blas\b', r'\bpara\b', r'\bcryptobeurs\b']
+        is_foreign = any(re.search(fw, text_to_search) for fw in foreign_stop)
+        strong = any((len(k) > 4) or re.search(r'[가-힣]', k) for k in matched_keys)
+        if is_foreign and not strong:
+            continue
+        filtered.append(t)
     return filtered
+
+def _parse_traffic(s):
+    try:
+        return int(str(s).strip().replace(",", "").replace("+", ""))
+    except Exception:
+        return 0
+
+def _news_domain(url):
+    try:
+        import urllib.parse as _up
+        host = _up.urlparse(url or "").netloc.replace("www.", "")
+        return host or "출처 미상"
+    except Exception:
+        return "출처 미상"
+
+def _normalize_title(s):
+    return re.sub(r'[^a-z0-9가-힣]+', '', (s or "").lower())
 
 def summarize_all_trends(all_trends_info):
     # LLM removed as per user instruction. Fast fallback to news titles.
@@ -412,9 +473,28 @@ def send_slack():
         t for t in summarized_all
         if not t.get("news") or t["news"][0].get("url") not in SENT_URLS
     ]
+    # 같은 정규화 제목은 한 번만 남기고, 몇 개 지역에서 나왔는지 센다.
+    # (이미 보낸 URL을 먼저 거른 뒤에 중복을 합친다. 먼저 합치면 안 보낸 복사본까지 사라진다.)
+    _seen_norm = {}
+    deduped_all = []
+    for _t in summarized_all:
+        _first_title = _t["news"][0]["title"] if _t.get("news") else _t.get("keyword", "")
+        _norm = _normalize_title(_first_title) or _normalize_title(_t.get("keyword", ""))
+        if _norm and _norm in _seen_norm:
+            _seen_norm[_norm]["geo_count"] = _seen_norm[_norm].get("geo_count", 1) + 1
+            _seen_norm[_norm].setdefault("geos", []).append(_t.get("geo_name", ""))
+            continue
+        _t["geo_count"] = 1
+        _t["geos"] = [_t.get("geo_name", "")]
+        if _norm:
+            _seen_norm[_norm] = _t
+        deduped_all.append(_t)
+    summarized_all = deduped_all
+    for _t in summarized_all:
+        _t["category"] = classify_trend_category(_t)
 
     
-    # S22 Ultra에 맞게 글로벌 경제 / 라이프 헬스로 카테고리화
+    # S22 Ultra에 맞게 글로벌 경제 / 라이프 헬스로 카테고리화 (classify_trend_category가 분류한다)
     trends_by_category = {"글로벌 경제": [], "라이프/헬스": []}
     
     geo_short = {
@@ -430,9 +510,12 @@ def send_slack():
         s_link = t["search_link"]
         summary = t["summary"]
         top_news_url = t["news"][0]["url"] if t["news"] else s_link
-        
-        # S22 모바일 화면 최적화: [국가] 키워드링크: 요약링크
-        trends_by_category[cat].append(f"• [{g}] <{s_link}|*{kw}*>: <{top_news_url}|{summary}>")
+        _traf = t.get("traffic", "")
+        _traf_txt = f"검색량 {_traf}+" if _traf else "검색량 미상"
+        _dom = _news_domain(top_news_url)
+        _geo_txt = f", {t.get('geo_count', 1)}개 지역" if t.get("geo_count", 1) > 1 else ""
+        # S22 모바일 화면 최적화: [국가] 키워드링크: 요약링크 (검색량, 출처, 지역 수 포함)
+        trends_by_category[cat].append(f"• [{g}] <{s_link}|*{kw}*> ({_traf_txt}, 출처: {_dom}{_geo_txt}): <{top_news_url}|{summary}>")
 
     trends_blocks = [
         {
@@ -459,16 +542,17 @@ def send_slack():
         "은", "는", "이", "가", "을", "를", "에", "에서", "의", "로", "으로", "과", "와", "도", "다", "들", "수", "할", "위해", "대한", "및",
         "이슈", "요약", "불가"
     ])
-    words = []
+    # 검색량 가중치: 단순 횟수가 아니라 각 항목의 검색량을 더한다.
+    word_scores = {}
     for t in summarized_all:
         text = t["keyword"] + " " + t.get("summary", "")
         if t["news"]: text += " " + t["news"][0]["title"]
         clean_text = re.sub(r'[^\w\s\uac00-\ud7a3]', ' ', text)
+        _w = _parse_traffic(t.get("traffic", "")) or 1
         for w in clean_text.lower().split():
             if len(w) > 1 and w not in stopwords and not w.isdigit():
-                words.append(w)
-    
-    top10 = Counter(words).most_common(10)
+                word_scores[w] = word_scores.get(w, 0) + _w
+    top10 = sorted(word_scores.items(), key=lambda kv: -kv[1])[:10]
     if top10:
         top_str = " | ".join([f"*{w}*({c})" for w, c in top10])
         trends_blocks.append({
