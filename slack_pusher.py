@@ -534,6 +534,33 @@ def get_keyword_news(keyword, limit=5):
         print(f"Keyword news error ({keyword}):", e)
         return None
 
+# 주제별 묶음 (2026-11-06). 가독성을 위해 2개 카테고리 대신 10개 주제로 나눈다.
+# 각 주제는 감시 단어 목록의 단어들로 정한다. 항목은 가장 먼저 맞는 주제에 들어간다.
+# 스크롤이 길어져도 주제 머리말과 한눈에 보기로 문맥을 쉽게 파악한다.
+THEMES = [
+    ("🇺🇸 미국 정치", ["미국 중간선거", "미국 상원", "미국 하원", "미국 공화당 민주당 의석 수"]),
+    ("🇺🇸 미국 경제", ["미국 금리", "미국 관세", "미국 전기차 관세", "미국 농민", "미국 아이오와 농민"]),
+    ("🇨🇳 중국", ["중국 증시", "중국 로봇", "유니트리", "중국 AI", "중국 데이터 센터", "중국 국경", "중국 분쟁", "중국 군사", "대만 군사", "샤오미"]),
+    ("🌍 지정학/안보", ["러시아 전쟁", "러시아 유가", "이스라엘 의석 수", "이스라엘 총리", "페트리어트", "토마호크", "항공모함", "해킹", "드론"]),
+    ("💻 반도체/AI", ["인텔", "인텔 주가", "엔비디아", "삼성반도체", "하이닉스", "마이크론", "HBM", "HBF", "클로드", "메타 뮤즈", "엔트로픽 상장", "샘 알트만 인터뷰", "Dola", "미국 데이터 센터", "개방형 팬"]),
+    ("📈 시장/금융", ["QQQ", "VOO", "SPY", "국채", "환율", "코인", "일본 환율", "말레이시아 환율"]),
+    ("🇰🇷 한국", ["대한민국 대통령 지지도", "대한민국 사법개혁", "대한민국 대법원장", "대한민국 탄핵"]),
+    ("🇪🇺 유럽", ["유럽 금리", "유럽 실업률", "유럽 데이터 센터"]),
+    ("🌏 기타 지역", ["아프리카 난민", "이란 난민", "브라질 대두", "브라질 인프라", "태국 국왕", "인도네시아 IT"]),
+    ("☕ 생활/소비/건강", ["커피", "지방간", "콜레스테롤", "희귀질환 치료제", "우롱차", "백차", "DTF 2060", "하드디스크", "롤스로이스", "마이바흐", "3d 프린팅", "F1", "보잉 777", "오설록", "아테스토니", "캠리", "어코드", "어깨 뻐근함", "캐나다구스", "보잉 787", "Z flip 8", "에르메스", "쿠치넬리", "구글 트랜드", "구글 트렌드"]),
+]
+
+def _theme_for(t):
+    # 항목이 어느 주제에 들어가는지 정한다. 단어와 요약, 첫 기사 제목에서 주제 단어를 찾는다.
+    _txt = (t.get("keyword", "") + " " + t.get("summary", "")).lower()
+    if t.get("news"):
+        _txt += " " + t["news"][0]["title"].lower()
+    for _name, _kws in THEMES:
+        for _kw in _kws:
+            if _kw.lower() in _txt:
+                return _name
+    return "📌 기타"
+
 # --- 가드레일: 오늘 겪은 에러를 자동으로 막는다 ---
 def _safe_mrkdwn_link(url, text):
     # 슬랙 마크다운 링크 안의 주소에 &가 있으면 400번 오류가 난다. &를 %26으로 바꾼다.
@@ -685,10 +712,14 @@ def send_slack():
     top10_str = " | ".join([f"*{w}*({c})" for w, c in _top10]) if _top10 else ""
 
     
-    # S22 Ultra에 맞게 글로벌 경제 / 라이프 헬스로 카테고리화 (classify_trend_category가 분류한다)
+    # 주제별 묶음. 가독성을 위해 2개 카테고리 대신 10개 주제로 나눈다.
+    # 스크롤이 길어져도 주제 머리말과 한눈에 보기로 문맥을 쉽게 파악한다.
     if do_trends:
-        trends_by_category = {"글로벌 경제": [], "라이프/헬스": []}
-    
+        trends_by_theme = {}
+        for _name, _kws in THEMES:
+            trends_by_theme[_name] = []
+        trends_by_theme["📌 기타"] = []
+
         geo_short = {
             "South Korea": "KR", "Singapore": "SG", "Netherlands": "NL",
             "Hong Kong": "HK", "Switzerland": "CH", "Israel": "IL",
@@ -696,7 +727,6 @@ def send_slack():
         }
 
         for t in summarized_all:
-            cat = t.get('category', '글로벌 경제')
             g = geo_short.get(t['geo_name'], t['geo_name'])
             kw = t["keyword"]
             s_link = t["search_link"]
@@ -707,8 +737,12 @@ def send_slack():
             _src = t["news"][0].get("source") if t.get("news") else None
             _dom = _src if _src else _publisher_label(top_news_url)
             _geo_txt = f", {t.get('geo_count', 1)}개 지역" if t.get("geo_count", 1) > 1 else ""
-            # S22 모바일 화면 최적화: [국가] 키워드링크: 요약링크 (검색량, 출처, 지역 수 포함)
-            trends_by_category[cat].append(f"• [{g}] {_safe_mrkdwn_link(s_link, '*' + kw + '*')} ({_traf_txt}, 출처: {_dom}{_geo_txt}): {_safe_mrkdwn_link(top_news_url, summary)}")
+            # 한 항목을 두 줄로 쓴다. 첫 줄은 단어와 지역, 검색량. 둘째 줄은 기사 제목과 출처.
+            _item = (
+                f"• {_safe_mrkdwn_link(s_link, '*' + kw + '*')} [{g}] · {_traf_txt}{_geo_txt}\n"
+                f"↳ {_safe_mrkdwn_link(top_news_url, summary)} (출처: {_dom})"
+            )
+            trends_by_theme[_theme_for(t)].append(_item)
 
         trends_blocks = [
             {
@@ -716,30 +750,41 @@ def send_slack():
                 "text": {"type": "plain_text", "text": "🌐 글로벌 이슈 트래킹"}
             }
         ]
-    
-        for cat_name in ["글로벌 경제", "라이프/헬스"]:
-            if trends_by_category[cat_name]:
-                items = trends_by_category[cat_name]
-                # 3000자 제한: 개수 기준이 아니라 글자 수 기준으로 나눈다. 긴 제목이 많으면 10개도 3000자를 넘는다.
-                _chunks = []
-                _cur = []
-                _cur_len = 0
-                for _it in items:
-                    _it_len = len(_it) + 1
-                    if _cur and _cur_len + _it_len > 2800:
-                        _chunks.append(_cur)
-                        _cur = []
-                        _cur_len = 0
-                    _cur.append(_it)
-                    _cur_len += _it_len
-                if _cur:
+
+        # 한눈에 보기: 주제별 건수
+        _ov_parts = []
+        for _name, _items in trends_by_theme.items():
+            if _items:
+                _ov_parts.append(f"{_name} {len(_items)}건")
+        if _ov_parts:
+            trends_blocks.append({
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": "📌 오늘의 한눈에 보기: " + " · ".join(_ov_parts)}]
+            })
+
+        for _name, _items in trends_by_theme.items():
+            if not _items:
+                continue
+            # 3000자 제한: 주제 안에서 글자 수 기준으로 나눈다.
+            _chunks = []
+            _cur = []
+            _cur_len = 0
+            for _it in _items:
+                _it_len = len(_it) + 1
+                if _cur and _cur_len + _it_len > 2800:
                     _chunks.append(_cur)
-                for _ci, _chunk in enumerate(_chunks):
-                    header_text = f"*{cat_name}*" if _ci == 0 else f"*{cat_name}* (계속)"
-                    trends_blocks.append({
-                        "type": "section",
-                        "text": {"type": "mrkdwn", "text": header_text + "\n" + "\n".join(_chunk)}
-                    })
+                    _cur = []
+                    _cur_len = 0
+                _cur.append(_it)
+                _cur_len += _it_len
+            if _cur:
+                _chunks.append(_cur)
+            for _ci, _chunk in enumerate(_chunks):
+                header_text = f"*{_name} ({len(_items)}건)*" if _ci == 0 else f"*{_name}* (계속)"
+                trends_blocks.append({
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": header_text + "\n" + "\n".join(_chunk)}
+                })
 
         if top10_str:
             trends_blocks.append({
