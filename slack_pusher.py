@@ -534,6 +534,58 @@ def get_keyword_news(keyword, limit=5):
         print(f"Keyword news error ({keyword}):", e)
         return None
 
+# --- 가드레일: 오늘 겪은 에러를 자동으로 막는다 ---
+def _safe_mrkdwn_link(url, text):
+    # 슬랙 마크다운 링크 안의 주소에 &가 있으면 400번 오류가 난다. &를 %26으로 바꾼다.
+    safe = (url or "").replace("&", "%26")
+    return f"<{safe}|{text}>"
+
+def _split_long_sections(blocks, limit=2800):
+    # 어떤 구역이든 3000자를 넘지 않게 나눈다. 자동 수정 가드레일.
+    # 구역 나누기가 개수 기준이라 긴 제목이 3000자를 넘긴 오늘의 400번 오류를 막는다.
+    out = []
+    for b in blocks:
+        if b.get("type") != "section":
+            out.append(b)
+            continue
+        text = b.get("text", {}).get("text", "")
+        if len(text) <= limit:
+            out.append(b)
+            continue
+        lines = text.split("\n")
+        header = lines[0]
+        items = lines[1:]
+        cur = [header]
+        cur_len = len(header)
+        for it in items:
+            if cur_len + 1 + len(it) > limit and len(cur) > 1:
+                out.append({"type": "section", "text": {"type": "mrkdwn", "text": "\n".join(cur)}})
+                cur = [header + " (계속)"]
+                cur_len = len(cur[0])
+            cur.append(it)
+            cur_len += 1 + len(it)
+        if cur:
+            out.append({"type": "section", "text": {"type": "mrkdwn", "text": "\n".join(cur)}})
+    return out
+
+def _validate_payload(payload):
+    # 보내기 전 최종 검사. 문제를 찾으면 그 내용을 돌려준다.
+    problems = []
+    if not payload:
+        return problems
+    blocks = payload.get("blocks", [])
+    if len(blocks) > 50:
+        problems.append(f"블록 {len(blocks)}개가 50개 제한을 넘는다")
+    for b in blocks:
+        if b.get("type") == "section":
+            t = b.get("text", {}).get("text", "")
+            if len(t) > 3000:
+                problems.append(f"구역 {len(t)}자가 3000자 제한을 넘는다")
+            for u in re.findall(r"<(https?://[^>|]+)", t):
+                if "&" in u:
+                    problems.append(f"링크 주소에 &가 있다: {u[:80]}")
+    return problems
+
 def send_slack():
     SENT_URLS = load_history()
     NEW_SENT_URLS = set()
@@ -656,7 +708,7 @@ def send_slack():
             _dom = _src if _src else _publisher_label(top_news_url)
             _geo_txt = f", {t.get('geo_count', 1)}개 지역" if t.get("geo_count", 1) > 1 else ""
             # S22 모바일 화면 최적화: [국가] 키워드링크: 요약링크 (검색량, 출처, 지역 수 포함)
-            trends_by_category[cat].append(f"• [{g}] <{s_link}|*{kw}*> ({_traf_txt}, 출처: {_dom}{_geo_txt}): <{top_news_url}|{summary}>")
+            trends_by_category[cat].append(f"• [{g}] {_safe_mrkdwn_link(s_link, '*' + kw + '*')} ({_traf_txt}, 출처: {_dom}{_geo_txt}): {_safe_mrkdwn_link(top_news_url, summary)}")
 
         trends_blocks = [
             {
@@ -702,6 +754,23 @@ def send_slack():
             "elements": [{"type": "mrkdwn", "text": f"🔥 *오늘의 핵심 키워드 Top 10*: {top10_str}"}]
         })
     
+    # 가드레일: 보내기 전에 모든 구역을 2800자 이하로 다시 나눈다. 자동 수정.
+    if payload_b2b:
+        payload_b2b["blocks"] = _split_long_sections(payload_b2b["blocks"])
+    if payload_trends:
+        payload_trends["blocks"] = _split_long_sections(payload_trends["blocks"])
+    # 가드레일: 자동 수정 뒤에도 문제가 남으면 그 보고서는 보내지 않는다. 다음 실행 때 다시 보낸다.
+    if payload_b2b:
+        _p = _validate_payload(payload_b2b)
+        if _p:
+            print("기업 간 거래 보고서 검사 실패, 보내지 않는다:", _p)
+            payload_b2b = None
+    if payload_trends:
+        _p = _validate_payload(payload_trends)
+        if _p:
+            print("소식 보고서 검사 실패, 보내지 않는다:", _p)
+            payload_trends = None
+
     # [E2E 텍스트 풀-프린트 검증]
     if do_b2b:
         print("--- PAYLOAD 1: B2B ---")
