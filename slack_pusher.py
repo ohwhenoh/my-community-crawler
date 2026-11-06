@@ -527,7 +527,7 @@ def get_keyword_news(keyword, limit=5):
         return {
             "keyword": keyword,
             "traffic": "",
-            "search_link": "https://news.google.com/search?q=" + _up.quote(keyword) + "&hl=ko&gl=KR&ceid=KR:ko",
+            "search_link": "https://news.google.com/search?q=" + _up.quote(keyword),
             "news": news_list,
             "geo_name": "South Korea",
         }
