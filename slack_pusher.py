@@ -295,28 +295,31 @@ def get_b2b_sales_report():
     return report.strip()
 
 
-TARGET_KEYWORDS = [
-    "빅테크", "실적", "어닝", "가이던스", "earnings", "revenue", "guidance", "big tech", "apple", "microsoft", "google", "meta", "amazon", "nvidia", "tesla",
-    "ai", "인프라", "데이터센터", "gpu", "tpu", "hbm", "인공지능", "artificial intelligence", "data center", "infrastructure",
-    "보안", "해킹", "랜섬웨어", "취약점", "유출", "cyber", "security", "hack", "breach", "ransomware", "vulnerability",
-    "지정학", "매크로", "geopolitical", "macro",
-    "중국 증시", "상해", "홍콩 증시", "항셍", "china market", "shanghai", "hang seng", "chinese stock",
-    "금리", "fed", "fomc", "기준금리", "rate", "interest", "rate cut", "rate hike",
-    "환율", "달러", "원화", "엔화", "위안화", "exchange rate", "currency", "usd", "krw", "jpy", "cny",
-    "법안", "거부권", "필리버스터", "의회", "상원", "하원", "bill", "veto", "filibuster", "senate", "house of representatives", "congress",
-    "이란", "전쟁", "우크라이나", "러시아", "이스라엘", "중동", "iran", "war", "ukraine", "russia", "israel", "middle east", "conflict",
-    "드론", "휴머노이드", "로봇", "유니트리", "drone", "humanoid", "robot", "unitree",
-    "선거", "자금", "기부", "election fund", "donation", "campaign", "pac",
-    "암호화폐", "비트코인", "이더리움", "crypto", "bitcoin", "ethereum", "btc", "eth",
-    "레딧", "reddit", "rddt",
-    "백질이영양증", "leukodystrophy", "aadc", "hemophilia", "혈우병", "치료제", "신약", "fda",
-    "이우환", "lee ufan", "워블리라이프", "wobbly life", "로블록스", "roblox", "fortnite", "포트나이트",
-    "개방형 팬", "open ran", "hbf", "예가체프", "게이샤", "yirgacheffe", "geisha", "샤오미", "xiaomi", 
-    "부동산", "real estate", "농지", "투기", "farmland", "speculation", 
-    "지지율", "approval rating", "조희대", "신천지", "shincheonji", 
-    "국내 증시", "코스피", "코스닥", "kospi", "kosdaq", 
-    "사법부", "judiciary", "네타냐후", "netanyahu", "ai 기본 사회", "ai society"
+# 감시 단어 목록 (2026-11-06, 파트너님이 직접 정한 88개 + "구글 트렌드" 표기 1개 = 89개).
+# 구글 트렌드 Really Simple Syndication 필터와 구글 뉴스 Really Simple Syndication 검색 둘 다 이 목록을 쓴다.
+# 목적: 국제 정세와 단어를 빨리 캐치한다.
+WATCH_KEYWORDS = [
+    "미국 중간선거", "인텔 주가", "중국 증시", "메타 뮤즈", "엔트로픽 상장",
+    "샘 알트만 인터뷰", "미국 아이오와 농민", "미국 농민", "미국 금리", "미국 관세",
+    "미국 전기차 관세", "미국 공화당 민주당 의석 수", "이스라엘 의석 수", "이스라엘 총리",
+    "대한민국 대통령 지지도", "대한민국 사법개혁", "대한민국 대법원장", "대한민국 탄핵",
+    "일본 환율", "러시아 전쟁", "러시아 유가", "중국 로봇", "유니트리",
+    "중국 AI", "중국 데이터 센터", "미국 데이터 센터", "유럽 금리", "유럽 실업률",
+    "유럽 데이터 센터", "아프리카 난민", "이란 난민", "브라질 대두", "브라질 인프라",
+    "말레이시아 환율", "태국 국왕", "인도네시아 IT", "중국 국경", "중국 분쟁",
+    "대만 군사", "중국 군사", "페트리어트", "토마호크", "개방형 팬",
+    "미국 상원", "미국 하원", "QQQ", "VOO", "인텔",
+    "HBF", "HBM", "엔비디아", "삼성반도체", "하이닉스",
+    "마이크론", "구글 트랜드", "구글 트렌드", "해킹", "코인",
+    "커피", "환율", "지방간", "콜레스테롤", "희귀질환 치료제",
+    "우롱차", "백차", "DTF 2060", "항공모함", "하드디스크",
+    "국채", "SPY", "Dola", "롤스로이스", "마이바흐",
+    "샤오미", "3d 프린팅", "F1", "보잉 777", "오설록",
+    "아테스토니", "캠리", "어코드", "드론", "어깨 뻐근함",
+    "캐나다구스", "보잉 787", "Z flip 8", "클로드", "에르메스",
+    "쿠치넬리",
 ]
+TARGET_KEYWORDS = WATCH_KEYWORDS
 
 import re
 
@@ -497,11 +500,7 @@ def get_google_trends_raw(geo="KR", limit=5):
         return []
 
 # 추적 키워드 13개 (표 파일의 키워드 목록). 구글 뉴스 RSS에서 직접 가져온다.
-TRACK_KEYWORDS = [
-    "팔로알토네트웍스", "시스코", "AI", "GPU", "데이터센터",
-    "AI 보안", "사이버보안", "API 보안", "클라우드보안", "AI 기본법",
-    "해킹", "KISA 보안공지", "재해복구(DR)",
-]
+TRACK_KEYWORDS = TARGET_KEYWORDS
 
 def get_keyword_news(keyword, limit=5):
     # 구글 뉴스 RSS 검색: 키워드별 최신 기사. 46개 언론사 기사를 포함한다.
