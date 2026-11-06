@@ -673,13 +673,25 @@ def send_slack():
         for cat_name in ["글로벌 경제", "라이프/헬스"]:
             if trends_by_category[cat_name]:
                 items = trends_by_category[cat_name]
-                chunk_size = 10  # 3000자 제한 방지
-                for i in range(0, len(items), chunk_size):
-                    chunk = items[i:i + chunk_size]
-                    header_text = f"*{cat_name}*" if i == 0 else f"*{cat_name}* (계속)"
+                # 3000자 제한: 개수 기준이 아니라 글자 수 기준으로 나눈다. 긴 제목이 많으면 10개도 3000자를 넘는다.
+                _chunks = []
+                _cur = []
+                _cur_len = 0
+                for _it in items:
+                    _it_len = len(_it) + 1
+                    if _cur and _cur_len + _it_len > 2800:
+                        _chunks.append(_cur)
+                        _cur = []
+                        _cur_len = 0
+                    _cur.append(_it)
+                    _cur_len += _it_len
+                if _cur:
+                    _chunks.append(_cur)
+                for _ci, _chunk in enumerate(_chunks):
+                    header_text = f"*{cat_name}*" if _ci == 0 else f"*{cat_name}* (계속)"
                     trends_blocks.append({
                         "type": "section",
-                        "text": {"type": "mrkdwn", "text": header_text + "\n" + "\n".join(chunk)}
+                        "text": {"type": "mrkdwn", "text": header_text + "\n" + "\n".join(_chunk)}
                     })
 
         if top10_str:
