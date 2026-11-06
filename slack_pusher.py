@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import requests
 
 import xml.etree.ElementTree as ET
@@ -464,8 +465,8 @@ def summarize_all_trends(all_trends_info):
 def get_google_trends_raw(geo="KR", limit=5):
     url = f"https://trends.google.com/trending/rss?geo={geo}"
     try:
-        res = requests.get(url, timeout=10)
-        if res.status_code != 200: return []
+        res = _fetch_with_retry(url, timeout=10)
+        if res is None or res.status_code != 200: return []
         root = ET.fromstring(res.text)
         channel = root.find("channel")
         items = channel.findall("item")[:limit]
@@ -507,8 +508,8 @@ def get_keyword_news(keyword, limit=5):
     import urllib.parse as _up
     url = "https://news.google.com/rss/search?q=" + _up.quote(keyword) + "&hl=ko&gl=KR&ceid=KR:ko"
     try:
-        res = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
-        if res.status_code != 200:
+        res = _fetch_with_retry(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        if res is None or res.status_code != 200:
             return None
         root = ET.fromstring(res.text)
         channel = root.find("channel")
@@ -583,6 +584,78 @@ def _build_google_trends_24h(raw_trends, top_n=8):
         "type": "section",
         "text": {"type": "mrkdwn", "text": "*📈 구글 트렌드 24시간 · 활성 트렌드만*\n" + "\n".join(lines)}
     }]
+
+# --- 자동 복구: 다시 시도와 상태 기록 ---
+# 에러는 생긴다. 이를 인지하고 자동으로 다시 시도하는 것이 포인트다.
+def _fetch_with_retry(url, headers=None, timeout=10, max_retries=3):
+    # 가져오기를 다시 시도한다. 일시적인 네트워크 오류와 5xx, 429번에 다시 시도한다.
+    # 400번(잘못된 요청)은 다시 시도해도 안 되므로 바로 돌려준다.
+    _delay = 5
+    for _attempt in range(max_retries):
+        try:
+            res = requests.get(url, headers=headers, timeout=timeout)
+            if res.status_code == 200:
+                return res
+            if res.status_code in (429, 500, 502, 503, 504) and _attempt < max_retries - 1:
+                print(f"가져오기 {res.status_code}, {_delay}초 뒤 다시 시도 ({_attempt + 1}/{max_retries})")
+                time.sleep(_delay)
+                _delay *= 2
+                continue
+            return res
+        except Exception as e:
+            if _attempt < max_retries - 1:
+                print(f"가져오기 오류 {e}, {_delay}초 뒤 다시 시도 ({_attempt + 1}/{max_retries})")
+                time.sleep(_delay)
+                _delay *= 2
+                continue
+            print(f"가져오기 실패 (다시 시도 {max_retries}번): {e}")
+            return None
+    return None
+
+def _post_with_retry(url, payload, max_retries=3):
+    # 슬랙 보내기를 다시 시도한다. 5xx와 429번, 네트워크 오류에 다시 시도한다.
+    # 400번(잘못된 요청)은 다시 시도해도 안 되므로 바로 돌려준다.
+    _delay = 10
+    _last = None
+    for _attempt in range(max_retries):
+        try:
+            res = requests.post(url, json=payload, timeout=10)
+            _last = res
+            if res.status_code == 200:
+                return res
+            if res.status_code in (429, 500, 502, 503, 504) and _attempt < max_retries - 1:
+                print(f"슬랙 보내기 {res.status_code}, {_delay}초 뒤 다시 시도 ({_attempt + 1}/{max_retries})")
+                time.sleep(_delay)
+                _delay *= 2
+                continue
+            return res
+        except Exception as e:
+            if _attempt < max_retries - 1:
+                print(f"슬랙 보내기 오류 {e}, {_delay}초 뒤 다시 시도 ({_attempt + 1}/{max_retries})")
+                time.sleep(_delay)
+                _delay *= 2
+                continue
+            print(f"슬랙 보내기 실패 (다시 시도 {max_retries}번): {e}")
+            return _last
+    return _last
+
+def _write_push_status(mode, b2b_status, trends_status, errors):
+    # 이번 실행 결과를 상태 파일에 남긴다. 감시 스크립트가 이 파일을 보고 실패를 알아챈다.
+    try:
+        _dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+        os.makedirs(_dir, exist_ok=True)
+        _status = {
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "mode": mode,
+            "b2b_status": b2b_status,
+            "trends_status": trends_status,
+            "ok": (b2b_status in (200, None)) and (trends_status in (200, None)) and not errors,
+            "errors": errors,
+        }
+        with open(os.path.join(_dir, "last_push_status.json"), "w", encoding="utf-8") as f:
+            json.dump(_status, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print("상태 파일 쓰기 실패:", e)
 
 def _theme_for(t):
     # 항목이 어느 주제에 들어가는지 정한다. 단어와 요약, 첫 기사 제목에서 주제 단어를 찾는다.
@@ -872,17 +945,26 @@ def send_slack():
         print(json.dumps(payload_trends, ensure_ascii=False, indent=2))
     print("------------------------")
     
+    _b2b_status = None
+    _trends_status = None
+    _errors = []
     if SLACK_WEBHOOK_URL:
         try:
             _sent_ok = True
             if payload_b2b:
-                res1 = requests.post(SLACK_WEBHOOK_URL, json=payload_b2b, timeout=10)
-                print("B2B 전송:", res1.status_code)
-                _sent_ok = _sent_ok and res1.status_code == 200
+                res1 = _post_with_retry(SLACK_WEBHOOK_URL, payload_b2b)
+                _b2b_status = res1.status_code if res1 is not None else None
+                print("B2B 전송:", _b2b_status)
+                _sent_ok = _sent_ok and _b2b_status == 200
+                if _b2b_status != 200:
+                    _errors.append(f"B2B 전송 {_b2b_status}")
             if payload_trends:
-                res2 = requests.post(SLACK_WEBHOOK_URL, json=payload_trends, timeout=10)
-                print("Trends 전송:", res2.status_code)
-                _sent_ok = _sent_ok and res2.status_code == 200
+                res2 = _post_with_retry(SLACK_WEBHOOK_URL, payload_trends)
+                _trends_status = res2.status_code if res2 is not None else None
+                print("Trends 전송:", _trends_status)
+                _sent_ok = _sent_ok and _trends_status == 200
+                if _trends_status != 200:
+                    _errors.append(f"Trends 전송 {_trends_status}")
             # 전송이 실패하면 보낸 기록을 저장하지 않는다. 다음 실행 때 다시 보낸다.
             if _sent_ok:
                 for t in summarized_all:
@@ -893,6 +975,11 @@ def send_slack():
                 print("전송 실패: 보낸 기록을 저장하지 않는다.")
         except Exception as e:
             print("Slack 발송 에러:", e)
+            _errors.append(f"Slack 발송 에러: {e}")
+    else:
+        _errors.append("SLACK_WEBHOOK_URL이 비어 있다")
+    # 이번 실행 결과를 상태 파일에 남긴다. 감시 스크립트가 이 파일을 보고 실패를 알아챈다.
+    _write_push_status(_mode, _b2b_status, _trends_status, _errors)
 
 if __name__ == "__main__":
     send_slack()
