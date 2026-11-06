@@ -55,9 +55,37 @@ def last_slot_before(now):
     return best
 
 
+def _container_running():
+    # 스케줄러 컨테이너가 살아 있는지 확인한다. 없으면 False.
+    try:
+        r = subprocess.run(
+            ["docker", "ps", "--filter", f"name={SCHEDULER_CONTAINER}", "--format", "{{.Names}}"],
+            capture_output=True, text=True, timeout=30,
+        )
+        return SCHEDULER_CONTAINER in (r.stdout or "")
+    except FileNotFoundError:
+        return False
+    except Exception:
+        return False
+
+
 def run_pusher():
-    # 푸셔를 다시 실행한다. .env를 읽어 푸시 모드를 그대로 쓴다.
+    # 푸셔를 다시 실행한다. 라즈베리에서는 컨테이너 안에서 실행하고, 랙스다에서는 바로 실행한다.
+    # .env를 읽어 푸시 모드를 그대로 쓴다.
     log("푸셔를 다시 실행한다.")
+    if _container_running():
+        # 컨테이너 안에서 실행한다. 호스트에서 직접 실행하면 컨테이너와 기록이 어긋날 수 있다.
+        try:
+            r = subprocess.run(
+                ["docker", "exec", SCHEDULER_CONTAINER, "python3", "/app/slack_pusher.py"],
+                capture_output=True, text=True, timeout=600,
+            )
+            tail = (r.stdout or "")[-500:]
+            log(f"푸셔 다시 실행 완료 (컨테이너 안, 종료 코드 {r.returncode}). 출력 꼬리: {tail!r}")
+            return r.returncode == 0
+        except Exception as e:
+            log(f"푸셔 다시 실행 실패 (컨테이너 안): {e}")
+            return False
     env = dict(os.environ)
     env_path = os.path.join(REPO_DIR, ".env")
     if os.path.exists(env_path):
@@ -83,14 +111,18 @@ def run_pusher():
 
 def check_container():
     # 라즈베리 스케줄러 컨테이너가 살아 있는지 확인하고, 멈췄으면 다시 시작한다.
+    if _container_running():
+        return
     try:
+        # 컨테이너가 아예 없는지(워치타워가 교체 중일 수 있다) 확인한다.
         r = subprocess.run(
-            ["docker", "ps", "--filter", f"name={SCHEDULER_CONTAINER}", "--format", "{{.Names}}"],
+            ["docker", "ps", "-a", "--filter", f"name={SCHEDULER_CONTAINER}", "--format", "{{.Names}} {{.Status}}"],
             capture_output=True, text=True, timeout=30,
         )
-        if SCHEDULER_CONTAINER in (r.stdout or ""):
+        if SCHEDULER_CONTAINER not in (r.stdout or ""):
+            log(f"스케줄러 컨테이너({SCHEDULER_CONTAINER})가 아예 없다. 워치타워가 교체 중일 수 있다. 다음 감시 때 다시 확인한다.")
             return
-        log(f"스케줄러 컨테이너({SCHEDULER_CONTAINER})가 안 보인다. 다시 시작한다.")
+        log(f"스케줄러 컨테이너({SCHEDULER_CONTAINER})가 멈춰 있다. 다시 시작한다.")
         r2 = subprocess.run(
             ["docker", "start", SCHEDULER_CONTAINER],
             capture_output=True, text=True, timeout=60,
