@@ -706,17 +706,23 @@ def send_slack():
     
     if SLACK_WEBHOOK_URL:
         try:
+            _sent_ok = True
             if payload_b2b:
                 res1 = requests.post(SLACK_WEBHOOK_URL, json=payload_b2b, timeout=10)
                 print("B2B 전송:", res1.status_code)
+                _sent_ok = _sent_ok and res1.status_code == 200
             if payload_trends:
                 res2 = requests.post(SLACK_WEBHOOK_URL, json=payload_trends, timeout=10)
                 print("Trends 전송:", res2.status_code)
-            
-            for t in summarized_all:
-                if t["news"]: NEW_SENT_URLS.add(t["news"][0]["url"])
-            SENT_URLS.update(NEW_SENT_URLS)
-            save_history(SENT_URLS)
+                _sent_ok = _sent_ok and res2.status_code == 200
+            # 전송이 실패하면 보낸 기록을 저장하지 않는다. 다음 실행 때 다시 보낸다.
+            if _sent_ok:
+                for t in summarized_all:
+                    if t["news"]: NEW_SENT_URLS.add(t["news"][0]["url"])
+                SENT_URLS.update(NEW_SENT_URLS)
+                save_history(SENT_URLS)
+            else:
+                print("전송 실패: 보낸 기록을 저장하지 않는다.")
         except Exception as e:
             print("Slack 발송 에러:", e)
 
