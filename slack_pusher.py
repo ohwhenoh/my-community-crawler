@@ -618,21 +618,17 @@ def send_slack():
     summarized_all = deduped_all
     for _t in summarized_all:
         _t["category"] = classify_trend_category(_t)
-    # 핵심 키워드 Top 10 (검색량 가중치). 소식 보고서와 기업 간 거래 보고서 둘 다 하단에 붙인다.
-    _stop = set([
-        "the", "in", "of", "and", "to", "a", "is", "for", "on", "with", "from", "at", "by", "this", "that", "it", "are", "be", "an", "as", "vs", "vs.",
-        "은", "는", "이", "가", "을", "를", "에", "에서", "의", "로", "으로", "과", "와", "도", "다", "들", "수", "할", "위해", "대한", "및",
-        "이슈", "요약", "불가"
-    ])
+    # 핵심 키워드 Top 10 (검색량 가중치). 감시 단어 구절을 세어 소식 보고서와 기업 간 거래 보고서 둘 다 하단에 붙인다.
     _scores = {}
     for _t in summarized_all:
         _txt = _t["keyword"] + " " + _t.get("summary", "")
-        if _t["news"]: _txt += " " + _t["news"][0]["title"]
-        _clean = re.sub(r'[^\w\s\uac00-\ud7a3]', ' ', _txt)
+        for _n in _t["news"]:
+            _txt += " " + _n["title"]
+        _low = _txt.lower()
         _w = _parse_traffic(_t.get("traffic", "")) or 1
-        for _w2 in _clean.lower().split():
-            if len(_w2) > 1 and _w2 not in _stop and not _w2.isdigit():
-                _scores[_w2] = _scores.get(_w2, 0) + _w
+        for _kw in TARGET_KEYWORDS:
+            if _kw.lower() in _low:
+                _scores[_kw] = _scores.get(_kw, 0) + _w
     _top10 = sorted(_scores.items(), key=lambda kv: -kv[1])[:10]
     top10_str = " | ".join([f"*{w}*({c})" for w, c in _top10]) if _top10 else ""
 
