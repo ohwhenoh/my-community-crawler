@@ -499,148 +499,160 @@ def get_google_trends_raw(geo="KR", limit=5):
 def send_slack():
     SENT_URLS = load_history()
     NEW_SENT_URLS = set()
-
-    # 1. B2B 매력도 분석
-    print("Generating B2B Report...")
-    b2b_report = get_b2b_sales_report()
+    # 푸시 모드: both(기본, 둘 다), b2b(기업 간 거래만), trends(소식만).
+    # 라즈베리는 b2b, 랙스다는 trends로 둔다. 모르는 값은 둘 다로 둔다.
+    _mode = os.environ.get("PUSH_MODE", "both").strip().lower()
+    do_b2b = _mode != "trends"
+    do_trends = _mode != "b2b"
     payload_b2b = None
-    if b2b_report:
-        payload_b2b = {
-            "text": "F5 B2B 매력도 분석",
-            "blocks": [
-                {
-                    "type": "header",
-                    "text": {
-                        "type": "plain_text",
-                        "text": f"🎯 F5 B2B 분석 (발행: {datetime.now().strftime('%m/%d %H:%M')})"
+    payload_trends = None
+    summarized_all = []
+
+    if do_b2b:
+        # 1. B2B 매력도 분석
+        print("Generating B2B Report...")
+        b2b_report = get_b2b_sales_report()
+        payload_b2b = None
+        if b2b_report:
+            payload_b2b = {
+                "text": "F5 B2B 매력도 분석",
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": f"🎯 F5 B2B 분석 (발행: {datetime.now().strftime('%m/%d %H:%M')})"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {"type": "mrkdwn", "text": b2b_report}
                     }
-                },
-                {
-                    "type": "section",
-                    "text": {"type": "mrkdwn", "text": b2b_report}
-                }
-            ]
+                ]
+            }
+
+    if do_trends:
+        # 2. 글로벌 구글 트렌드
+        print("Collecting Google Trends...")
+        geos = {
+            "South Korea": "KR", "Singapore": "SG", "Netherlands": "NL",
+            "Hong Kong": "HK", "Switzerland": "CH", "Israel": "IL",
+            "Japan": "JP", "California (US)": "US-CA"
+        }
+    
+        all_trends = []
+        for name, code in geos.items():
+            res = get_google_trends_raw(code, 20)
+            if res:
+                for r in res: r['geo_name'] = name
+                all_trends.extend(res)
+
+    
+        all_trends = filter_trends_by_keywords(all_trends)
+        summarized_all = summarize_all_trends(all_trends)
+
+        # 중복 방지: 이미 보낸 뉴스 주소는 다시 보내지 않는다.
+        # sent_history.json은 data 폴더에 두어 컨테이너가 다시 떠도 남는다.
+        summarized_all = [
+            t for t in summarized_all
+            if not t.get("news") or t["news"][0].get("url") not in SENT_URLS
+        ]
+        # 같은 정규화 제목은 한 번만 남기고, 몇 개 지역에서 나왔는지 센다.
+        # (이미 보낸 URL을 먼저 거른 뒤에 중복을 합친다. 먼저 합치면 안 보낸 복사본까지 사라진다.)
+        _seen_norm = {}
+        deduped_all = []
+        for _t in summarized_all:
+            _first_title = _t["news"][0]["title"] if _t.get("news") else _t.get("keyword", "")
+            _norm = _normalize_title(_first_title) or _normalize_title(_t.get("keyword", ""))
+            if _norm and _norm in _seen_norm:
+                _seen_norm[_norm]["geo_count"] = _seen_norm[_norm].get("geo_count", 1) + 1
+                _seen_norm[_norm].setdefault("geos", []).append(_t.get("geo_name", ""))
+                continue
+            _t["geo_count"] = 1
+            _t["geos"] = [_t.get("geo_name", "")]
+            if _norm:
+                _seen_norm[_norm] = _t
+            deduped_all.append(_t)
+        summarized_all = deduped_all
+        for _t in summarized_all:
+            _t["category"] = classify_trend_category(_t)
+
+    
+        # S22 Ultra에 맞게 글로벌 경제 / 라이프 헬스로 카테고리화 (classify_trend_category가 분류한다)
+        trends_by_category = {"글로벌 경제": [], "라이프/헬스": []}
+    
+        geo_short = {
+            "South Korea": "KR", "Singapore": "SG", "Netherlands": "NL",
+            "Hong Kong": "HK", "Switzerland": "CH", "Israel": "IL",
+            "Japan": "JP", "California (US)": "US"
         }
 
-    # 2. 글로벌 구글 트렌드
-    print("Collecting Google Trends...")
-    geos = {
-        "South Korea": "KR", "Singapore": "SG", "Netherlands": "NL",
-        "Hong Kong": "HK", "Switzerland": "CH", "Israel": "IL",
-        "Japan": "JP", "California (US)": "US-CA"
-    }
+        for t in summarized_all:
+            cat = t.get('category', '글로벌 경제')
+            g = geo_short.get(t['geo_name'], t['geo_name'])
+            kw = t["keyword"]
+            s_link = t["search_link"]
+            summary = t["summary"]
+            top_news_url = t["news"][0]["url"] if t["news"] else s_link
+            _traf = t.get("traffic", "")
+            _traf_txt = f"검색량 {_traf}+" if _traf else "검색량 미상"
+            _dom = _publisher_label(top_news_url)
+            _geo_txt = f", {t.get('geo_count', 1)}개 지역" if t.get("geo_count", 1) > 1 else ""
+            # S22 모바일 화면 최적화: [국가] 키워드링크: 요약링크 (검색량, 출처, 지역 수 포함)
+            trends_by_category[cat].append(f"• [{g}] <{s_link}|*{kw}*> ({_traf_txt}, 출처: {_dom}{_geo_txt}): <{top_news_url}|{summary}>")
+
+        trends_blocks = [
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "🌐 글로벌 이슈 트래킹"}
+            }
+        ]
     
-    all_trends = []
-    for name, code in geos.items():
-        res = get_google_trends_raw(code, 20)
-        if res:
-            for r in res: r['geo_name'] = name
-            all_trends.extend(res)
+        for cat_name in ["글로벌 경제", "라이프/헬스"]:
+            if trends_by_category[cat_name]:
+                items = trends_by_category[cat_name]
+                chunk_size = 10  # 3000자 제한 방지
+                for i in range(0, len(items), chunk_size):
+                    chunk = items[i:i + chunk_size]
+                    header_text = f"*{cat_name}*" if i == 0 else f"*{cat_name}* (계속)"
+                    trends_blocks.append({
+                        "type": "section",
+                        "text": {"type": "mrkdwn", "text": header_text + "\n" + "\n".join(chunk)}
+                    })
 
-    
-    all_trends = filter_trends_by_keywords(all_trends)
-    summarized_all = summarize_all_trends(all_trends)
+        from collections import Counter
+        stopwords = set([
+            "the", "in", "of", "and", "to", "a", "is", "for", "on", "with", "from", "at", "by", "this", "that", "it", "are", "be", "an", "as", "vs", "vs.",
+            "은", "는", "이", "가", "을", "를", "에", "에서", "의", "로", "으로", "과", "와", "도", "다", "들", "수", "할", "위해", "대한", "및",
+            "이슈", "요약", "불가"
+        ])
+        # 검색량 가중치: 단순 횟수가 아니라 각 항목의 검색량을 더한다.
+        word_scores = {}
+        for t in summarized_all:
+            text = t["keyword"] + " " + t.get("summary", "")
+            if t["news"]: text += " " + t["news"][0]["title"]
+            clean_text = re.sub(r'[^\w\s\uac00-\ud7a3]', ' ', text)
+            _w = _parse_traffic(t.get("traffic", "")) or 1
+            for w in clean_text.lower().split():
+                if len(w) > 1 and w not in stopwords and not w.isdigit():
+                    word_scores[w] = word_scores.get(w, 0) + _w
+        top10 = sorted(word_scores.items(), key=lambda kv: -kv[1])[:10]
+        if top10:
+            top_str = " | ".join([f"*{w}*({c})" for w, c in top10])
+            trends_blocks.append({
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": f"🔥 *오늘의 핵심 키워드 Top 10*: {top_str}"}]
+            })
 
-    # 중복 방지: 이미 보낸 뉴스 주소는 다시 보내지 않는다.
-    # sent_history.json은 data 폴더에 두어 컨테이너가 다시 떠도 남는다.
-    summarized_all = [
-        t for t in summarized_all
-        if not t.get("news") or t["news"][0].get("url") not in SENT_URLS
-    ]
-    # 같은 정규화 제목은 한 번만 남기고, 몇 개 지역에서 나왔는지 센다.
-    # (이미 보낸 URL을 먼저 거른 뒤에 중복을 합친다. 먼저 합치면 안 보낸 복사본까지 사라진다.)
-    _seen_norm = {}
-    deduped_all = []
-    for _t in summarized_all:
-        _first_title = _t["news"][0]["title"] if _t.get("news") else _t.get("keyword", "")
-        _norm = _normalize_title(_first_title) or _normalize_title(_t.get("keyword", ""))
-        if _norm and _norm in _seen_norm:
-            _seen_norm[_norm]["geo_count"] = _seen_norm[_norm].get("geo_count", 1) + 1
-            _seen_norm[_norm].setdefault("geos", []).append(_t.get("geo_name", ""))
-            continue
-        _t["geo_count"] = 1
-        _t["geos"] = [_t.get("geo_name", "")]
-        if _norm:
-            _seen_norm[_norm] = _t
-        deduped_all.append(_t)
-    summarized_all = deduped_all
-    for _t in summarized_all:
-        _t["category"] = classify_trend_category(_t)
-
-    
-    # S22 Ultra에 맞게 글로벌 경제 / 라이프 헬스로 카테고리화 (classify_trend_category가 분류한다)
-    trends_by_category = {"글로벌 경제": [], "라이프/헬스": []}
-    
-    geo_short = {
-        "South Korea": "KR", "Singapore": "SG", "Netherlands": "NL",
-        "Hong Kong": "HK", "Switzerland": "CH", "Israel": "IL",
-        "Japan": "JP", "California (US)": "US"
-    }
-
-    for t in summarized_all:
-        cat = t.get('category', '글로벌 경제')
-        g = geo_short.get(t['geo_name'], t['geo_name'])
-        kw = t["keyword"]
-        s_link = t["search_link"]
-        summary = t["summary"]
-        top_news_url = t["news"][0]["url"] if t["news"] else s_link
-        _traf = t.get("traffic", "")
-        _traf_txt = f"검색량 {_traf}+" if _traf else "검색량 미상"
-        _dom = _publisher_label(top_news_url)
-        _geo_txt = f", {t.get('geo_count', 1)}개 지역" if t.get("geo_count", 1) > 1 else ""
-        # S22 모바일 화면 최적화: [국가] 키워드링크: 요약링크 (검색량, 출처, 지역 수 포함)
-        trends_by_category[cat].append(f"• [{g}] <{s_link}|*{kw}*> ({_traf_txt}, 출처: {_dom}{_geo_txt}): <{top_news_url}|{summary}>")
-
-    trends_blocks = [
-        {
-            "type": "header",
-            "text": {"type": "plain_text", "text": "🌐 글로벌 이슈 트래킹"}
-        }
-    ]
-    
-    for cat_name in ["글로벌 경제", "라이프/헬스"]:
-        if trends_by_category[cat_name]:
-            items = trends_by_category[cat_name]
-            chunk_size = 10  # 3000자 제한 방지
-            for i in range(0, len(items), chunk_size):
-                chunk = items[i:i + chunk_size]
-                header_text = f"*{cat_name}*" if i == 0 else f"*{cat_name}* (계속)"
-                trends_blocks.append({
-                    "type": "section",
-                    "text": {"type": "mrkdwn", "text": header_text + "\n" + "\n".join(chunk)}
-                })
-
-    from collections import Counter
-    stopwords = set([
-        "the", "in", "of", "and", "to", "a", "is", "for", "on", "with", "from", "at", "by", "this", "that", "it", "are", "be", "an", "as", "vs", "vs.",
-        "은", "는", "이", "가", "을", "를", "에", "에서", "의", "로", "으로", "과", "와", "도", "다", "들", "수", "할", "위해", "대한", "및",
-        "이슈", "요약", "불가"
-    ])
-    # 검색량 가중치: 단순 횟수가 아니라 각 항목의 검색량을 더한다.
-    word_scores = {}
-    for t in summarized_all:
-        text = t["keyword"] + " " + t.get("summary", "")
-        if t["news"]: text += " " + t["news"][0]["title"]
-        clean_text = re.sub(r'[^\w\s\uac00-\ud7a3]', ' ', text)
-        _w = _parse_traffic(t.get("traffic", "")) or 1
-        for w in clean_text.lower().split():
-            if len(w) > 1 and w not in stopwords and not w.isdigit():
-                word_scores[w] = word_scores.get(w, 0) + _w
-    top10 = sorted(word_scores.items(), key=lambda kv: -kv[1])[:10]
-    if top10:
-        top_str = " | ".join([f"*{w}*({c})" for w, c in top10])
-        trends_blocks.append({
-            "type": "context",
-            "elements": [{"type": "mrkdwn", "text": f"🔥 *오늘의 핵심 키워드 Top 10*: {top_str}"}]
-        })
-
-    payload_trends = {"text": "글로벌 트렌드 분석", "blocks": trends_blocks}
+        payload_trends = {"text": "글로벌 트렌드 분석", "blocks": trends_blocks}
     
     # [E2E 텍스트 풀-프린트 검증]
-    print("--- PAYLOAD 1: B2B ---")
-    print(json.dumps(payload_b2b, ensure_ascii=False, indent=2))
-    print("--- PAYLOAD 2: TRENDS ---")
-    print(json.dumps(payload_trends, ensure_ascii=False, indent=2))
+    if do_b2b:
+        print("--- PAYLOAD 1: B2B ---")
+        print(json.dumps(payload_b2b, ensure_ascii=False, indent=2))
+    if do_trends:
+        print("--- PAYLOAD 2: TRENDS ---")
+        print(json.dumps(payload_trends, ensure_ascii=False, indent=2))
     print("------------------------")
     
     if SLACK_WEBHOOK_URL:
@@ -648,8 +660,9 @@ def send_slack():
             if payload_b2b:
                 res1 = requests.post(SLACK_WEBHOOK_URL, json=payload_b2b, timeout=10)
                 print("B2B 전송:", res1.status_code)
-            res2 = requests.post(SLACK_WEBHOOK_URL, json=payload_trends, timeout=10)
-            print("Trends 전송:", res2.status_code)
+            if payload_trends:
+                res2 = requests.post(SLACK_WEBHOOK_URL, json=payload_trends, timeout=10)
+                print("Trends 전송:", res2.status_code)
             
             for t in summarized_all:
                 if t["news"]: NEW_SENT_URLS.add(t["news"][0]["url"])

@@ -47,7 +47,7 @@ def run_backup_job():
 if __name__ == "__main__":
     print("=" * 60, flush=True)
     print("🚀 대한민국 6대 산업군 실시간 OSINT 세일즈 스케줄러 데몬 시작", flush=True)
-    print("⏱️  예약 타겟 시각: 매일 08:40, 10:50, 15:30 (하루 3회)", flush=True)
+    print("⏱️  푸시 시각: 매일 08:20, 11:50, 16:00 한국 시간 (하루 3회, 싱가포르 시간 07:20, 10:50, 15:00)", flush=True)
     print("=" * 60, flush=True)
     
     # Run an immediate dry-run to ensure docker container connectivity on startup
@@ -64,13 +64,14 @@ if __name__ == "__main__":
     
     if is_dr:
         print("🔧 [DR 모드] 라즈베리파이 백업 노드로 기동되었습니다.", flush=True)
-        # SGT 07:25, 16:00 -> KST 08:25, 17:00 -> KST 08:25, 17:00. DR node adds 3 minutes.
-        caddie_trigger_times = ["08:28", "17:03"]
+        # 푸시 시각: 싱가포르 시간 07:20, 10:50, 15:00 -> 한국 시간 08:20, 11:50, 16:00.
+        # 라즈베리는 기업 간 거래만, 랙스다는 소식만 보내므로 따로 늦추지 않는다.
+        caddie_trigger_times = ["08:20", "11:50", "16:00"]
         backup_trigger_time = "00:03"
     else:
         print("💻 [Primary 모드] 맥프로 메인 노드로 기동되었습니다.", flush=True)
-        # SGT 07:25, 16:00 -> KST 08:25, 17:00
-        caddie_trigger_times = ["08:25", "17:00"]
+        # 푸시 시각: 싱가포르 시간 07:20, 10:50, 15:00 -> 한국 시간 08:20, 11:50, 16:00
+        caddie_trigger_times = ["08:20", "11:50", "16:00"]
         backup_trigger_time = "00:00"
 
     last_trigger_date = ""
