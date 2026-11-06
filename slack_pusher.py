@@ -376,17 +376,22 @@ def _news_domain(url):
         return "출처 미상"
 
 # 출판사 이름 표시 (랙스다 전용, SHOW_PUBLISHER_NAMES=true일 때만 켠다).
-# 사진으로 받은 표(2026-11-06)의 주소 열과 출판사 열에서 만든 대응표.
-# 표에 없는 주소는 지금처럼 주소로 보여준다.
+# 표 파일 Sheet2의 46개 미디어 이름 목록(2026-11-06)에서 만든 대응표.
+# 전자신문은 etnews.com, 이데일리는 edaily.co.kr로 바로잡았다.
+# magazine.hankyung.com은 한경비즈니스, mbn 계열은 MBN으로 맞췄다.
+# 동행미디어 시대는 주소를 몰라서 넣지 않았다.
 PUBLISHER_NAMES = {
     "hankyung.com": "한국경제",
-    "magazine.hankyung.com": "한국경제",
+    "magazine.hankyung.com": "한경비즈니스",
     "sedaily.com": "서울경제",
     "biz.heraldcorp.com": "헤럴드경제",
     "seoul.co.kr": "서울신문",
-    "etnews.com": "이데일리",
+    "etnews.com": "전자신문",
+    "edaily.co.kr": "이데일리",
     "yna.co.kr": "연합뉴스",
+    "yonhapnewstv.co.kr": "연합뉴스TV",
     "mk.co.kr": "매일경제",
+    "economy.mk.co.kr": "매경이코노미",
     "joongang.co.kr": "중앙일보",
     "newsis.com": "뉴시스",
     "munhwa.com": "문화일보",
@@ -400,9 +405,28 @@ PUBLISHER_NAMES = {
     "dt.co.kr": "디지털타임스",
     "bloter.net": "블로터",
     "biz.chosun.com": "조선비즈",
-    "mbn.mk.co.kr": "매일방송",
+    "chosun.com": "조선일보",
+    "weekly.chosun.com": "주간조선",
+    "mbn.mk.co.kr": "MBN",
+    "mbn.co.kr": "MBN",
     "economist.co.kr": "이코노미스트",
     "khan.co.kr": "경향신문",
+    "kbs.co.kr": "KBS",
+    "sbs.co.kr": "SBS",
+    "biz.sbs.co.kr": "SBS Biz",
+    "tvchosun.com": "TV조선",
+    "ytn.co.kr": "YTN",
+    "kado.net": "강원도민일보",
+    "kmib.co.kr": "국민일보",
+    "dgmbc.com": "대구MBC",
+    "tf.co.kr": "더팩트",
+    "dailian.co.kr": "데일리안",
+    "ddaily.co.kr": "디지털데일리",
+    "asiae.co.kr": "아시아경제",
+    "inews24.com": "아이뉴스24",
+    "fnnews.com": "파이낸셜뉴스",
+    "wowtv.co.kr": "한국경제TV",
+    "hankookilbo.com": "한국일보",
 }
 
 def _publisher_label(url):
