@@ -272,7 +272,11 @@ def get_b2b_sales_report():
         else: fx_gain_score = -raw_fx_change
             
         final_score = fx_gain_score + (spread * -1.0)
-        if final_score >= 0.5: status = "🔥 엑셀 (황금타이밍)"
+        _spread_contrib = spread * -1.0
+        # 금리차가 판정을 지배하면 규칙을 적용하지 않는다. 금리차 기여도가 환율 기여도보다 크고 2% 이상이면, 판정은 금리차가 만든 것이지 환율 매력이 아니다. (예: 터키, 금리차 33%)
+        if abs(_spread_contrib) > abs(fx_gain_score) and abs(_spread_contrib) >= 2.0:
+            status = "⚠️ 규칙 적용 안 됨 (금리차가 판정을 지배함)"
+        elif final_score >= 0.5: status = "🔥 엑셀 (황금타이밍)"
         elif final_score < -0.3: status = "🛑 브레이크 (진입금지)"
         else: status = "⏸️ 대기 (기어중립)"
             
@@ -282,7 +286,6 @@ def get_b2b_sales_report():
         _local_src = YIELD_SOURCE.get(c["te_path"], ("자료 없음", ""))
         _local_src_txt = f"{_local_src[0]}{' ' + _local_src[1] if _local_src[1] else ''}"
         _us_src_txt = f"{_us_src[0]}{' ' + _us_src[1] if _us_src[1] else ''}"
-        _spread_contrib = spread * -1.0
         report += f"\n{c['flag']} *{c['name']} ({sym})*{cache_warn}\n"
         report += f" • 환율: {cfx:,.4f} (3개월 전 대비 {trend_word} {abs(raw_fx_change):.2f}%, 유럽중앙은행 고시 {_fx_date})\n"
         report += f" • 금리: 🇺🇸{us_yield:.2f}% ({_us_src_txt}) vs {c['flag']}{local_yield:.2f}% ({_local_src_txt})\n"
