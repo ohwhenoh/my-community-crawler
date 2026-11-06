@@ -409,7 +409,21 @@ def _publisher_label(url):
     dom = _news_domain(url)
     if os.environ.get("SHOW_PUBLISHER_NAMES", "").strip().lower() != "true":
         return dom
-    return PUBLISHER_NAMES.get(dom, dom)
+    if dom in PUBLISHER_NAMES:
+        return PUBLISHER_NAMES[dom]
+    # 하위 주소도 잡는다: en.sedaily.com -> sedaily.com -> 서울경제.
+    # 왼쪽부터 한 개씩 떼어 보되, 등록 가능한 주소보다 짧아지면 멈춘다.
+    # (.co.kr 주소는 3개까지만 떼고, 그 아래는 주소로 둔다.)
+    labels = dom.split(".")
+    for i in range(1, len(labels)):
+        cand = ".".join(labels[i:])
+        if len(cand.split(".")) < 2:
+            break
+        if dom.endswith(".co.kr") and len(cand.split(".")) < 3:
+            break
+        if cand in PUBLISHER_NAMES:
+            return PUBLISHER_NAMES[cand]
+    return dom
 
 def _normalize_title(s):
     return re.sub(r'[^a-z0-9가-힣]+', '', (s or "").lower())
@@ -474,7 +488,7 @@ def send_slack():
                     "type": "header",
                     "text": {
                         "type": "plain_text",
-                        "text": f"🎯 F5 B2B 분석 (발행: {datetime.now(timezone(timedelta(hours=9))).strftime('%m/%d %H:%M')})"
+                        "text": f"🎯 F5 B2B 분석 (발행: {datetime.now().strftime('%m/%d %H:%M')})"
                     }
                 },
                 {
