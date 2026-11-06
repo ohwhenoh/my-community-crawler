@@ -375,6 +375,42 @@ def _news_domain(url):
     except Exception:
         return "출처 미상"
 
+# 출판사 이름 표시 (랙스다 전용, SHOW_PUBLISHER_NAMES=true일 때만 켠다).
+# 사진으로 받은 표(2026-11-06)의 주소 열과 출판사 열에서 만든 대응표.
+# 표에 없는 주소는 지금처럼 주소로 보여준다.
+PUBLISHER_NAMES = {
+    "hankyung.com": "한국경제",
+    "magazine.hankyung.com": "한국경제",
+    "sedaily.com": "서울경제",
+    "biz.heraldcorp.com": "헤럴드경제",
+    "seoul.co.kr": "서울신문",
+    "etnews.com": "이데일리",
+    "yna.co.kr": "연합뉴스",
+    "mk.co.kr": "매일경제",
+    "joongang.co.kr": "중앙일보",
+    "newsis.com": "뉴시스",
+    "munhwa.com": "문화일보",
+    "mt.co.kr": "머니투데이",
+    "segye.com": "세계일보",
+    "hani.co.kr": "한겨레",
+    "nocutnews.co.kr": "노컷뉴스",
+    "zdnet.co.kr": "지디넷코리아",
+    "busan.com": "부산일보",
+    "news1.kr": "뉴스1",
+    "dt.co.kr": "디지털타임스",
+    "bloter.net": "블로터",
+    "biz.chosun.com": "조선비즈",
+    "mbn.mk.co.kr": "매일방송",
+    "economist.co.kr": "이코노미스트",
+    "khan.co.kr": "경향신문",
+}
+
+def _publisher_label(url):
+    dom = _news_domain(url)
+    if os.environ.get("SHOW_PUBLISHER_NAMES", "").strip().lower() != "true":
+        return dom
+    return PUBLISHER_NAMES.get(dom, dom)
+
 def _normalize_title(s):
     return re.sub(r'[^a-z0-9가-힣]+', '', (s or "").lower())
 
@@ -512,7 +548,7 @@ def send_slack():
         top_news_url = t["news"][0]["url"] if t["news"] else s_link
         _traf = t.get("traffic", "")
         _traf_txt = f"검색량 {_traf}+" if _traf else "검색량 미상"
-        _dom = _news_domain(top_news_url)
+        _dom = _publisher_label(top_news_url)
         _geo_txt = f", {t.get('geo_count', 1)}개 지역" if t.get("geo_count", 1) > 1 else ""
         # S22 모바일 화면 최적화: [국가] 키워드링크: 요약링크 (검색량, 출처, 지역 수 포함)
         trends_by_category[cat].append(f"• [{g}] <{s_link}|*{kw}*> ({_traf_txt}, 출처: {_dom}{_geo_txt}): <{top_news_url}|{summary}>")
