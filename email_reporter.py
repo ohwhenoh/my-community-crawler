@@ -4,7 +4,31 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 import yfinance as yf
-import crawler_slack
+
+def _fx_analysis_text():
+    # 낡은 crawler_slack 모듈이 깃허브에 없어서 가져오기가 실패했다.
+    # 지금 쓰는 푸셔의 프랑크푸르터 환율 조회로 환율 분석을 만든다.
+    # 조회가 실패하면 빈칸 대신 자료 없음 한 줄을 넣고, 이메일 전체는 계속 보낸다.
+    try:
+        from slack_pusher import get_frankfurter_fx
+        curr_fx, hist_fx = get_frankfurter_fx()
+        if not curr_fx or not hist_fx:
+            return "• 환율 분석: (환율 자료 없음)\n"
+        names = {"CNY": "중국 위안", "KRW": "한국 원", "JPY": "일본 엔",
+                 "EUR": "유로", "CHF": "스위스 프랑", "HKD": "홍콩 달러",
+                 "IDR": "인도네시아 루피아", "MYR": "말레이시아 링깃"}
+        lines = ["📊 *[환율 동향 (달러 기준, 3개월 전 대비)]*"]
+        for sym, name in names.items():
+            c = curr_fx.get(sym, 0)
+            h = hist_fx.get(sym, 0)
+            if not c or not h:
+                continue
+            chg = (c / h - 1.0) * 100.0
+            word = "상승" if chg > 0 else "하락"
+            lines.append(f"  • {name} ({sym}): {c:,.4f} (3개월 전 대비 {word} {abs(chg):.2f}%)")
+        return "\n".join(lines) + "\n"
+    except Exception:
+        return "• 환율 분석: (환율 자료 없음)\n"
 
 def load_env():
     env_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -23,7 +47,7 @@ def get_macro_email_content():
     session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'})
 
     # 1. FX Analysis
-    fx_analysis = crawler_slack.get_fx_analysis()
+    fx_analysis = _fx_analysis_text()
     
     # 2. Bond Analysis (Copied logic from generate_korean_outreach_report)
     bonds = {'미국 10년': 'IEF', '일본 10년': '2515.T', '영국 10년': 'IGLT.L', '중국 10년': 'CBON', '벨기에 10년': 'XG7S.MI', '캐나다 10년': 'XGB.TO'}
@@ -36,6 +60,10 @@ def get_macro_email_content():
             if len(hist) < 5: continue
                 
             curr_price = hist['Close'].iloc[-1]
+            # 야후 파이낸스 최신 종가가 비어 있는 날이 있다. 숫자가 아니면 그 나라는 빼고 보낸다.
+            import math
+            if not math.isfinite(curr_price):
+                continue
             try: m1_price = hist.loc[hist.index >= (hist.index[-1] - timedelta(days=30))]['Close'].iloc[0]
             except: m1_price = curr_price
             
