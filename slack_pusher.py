@@ -550,6 +550,40 @@ THEMES = [
     ("☕ 생활/소비/건강", ["커피", "지방간", "콜레스테롤", "희귀질환 치료제", "우롱차", "백차", "DTF 2060", "하드디스크", "롤스로이스", "마이바흐", "3d 프린팅", "F1", "보잉 777", "오설록", "아테스토니", "캠리", "어코드", "어깨 뻐근함", "캐나다구스", "보잉 787", "Z flip 8", "에르메스", "쿠치넬리", "구글 트랜드", "구글 트렌드"]),
 ]
 
+# 구글 트렌드 24시간 활성 트렌드 (생활/소비/건강 하단, 2026-11-06).
+# Really Simple Syndication은 지금 뜨는 검색어(24시간, 활성 트렌드)를 돌려준다. 필터를 거치지 않은 날것을 쓴다.
+GT24_REGIONS = [
+    ("🇺🇸 미국", "California (US)"),
+    ("🇸🇬 싱가포르", "Singapore"),
+    ("🇰🇷 대한민국", "South Korea"),
+    ("🇳🇱 네덜란드", "Netherlands"),
+]
+
+def _build_google_trends_24h(raw_trends, top_n=8):
+    # 구글 트렌드 날것(필터 전)을 지역별로 묶어 24시간 활성 트렌드만 보여준다.
+    by_region = {}
+    for t in raw_trends or []:
+        by_region.setdefault(t.get("geo_name", ""), []).append(t)
+    lines = []
+    for _flag, _geo in GT24_REGIONS:
+        _items = by_region.get(_geo, [])
+        if not _items:
+            continue
+        _items = sorted(_items, key=lambda x: -(_parse_traffic(x.get("traffic", "")) or 0))[:top_n]
+        _parts = []
+        for _it in _items:
+            _kw = _it["keyword"]
+            _tr = _it.get("traffic", "")
+            _tr_txt = f"({_tr}+)" if _tr else ""
+            _parts.append(f"{_safe_mrkdwn_link(_it.get('search_link', ''), _kw)} {_tr_txt}".strip())
+        lines.append(f"{_flag}: " + " · ".join(_parts))
+    if not lines:
+        return []
+    return [{
+        "type": "section",
+        "text": {"type": "mrkdwn", "text": "*📈 구글 트렌드 24시간 · 활성 트렌드만*\n" + "\n".join(lines)}
+    }]
+
 def _theme_for(t):
     # 항목이 어느 주제에 들어가는지 정한다. 단어와 요약, 첫 기사 제목에서 주제 단어를 찾는다.
     _txt = (t.get("keyword", "") + " " + t.get("summary", "")).lower()
@@ -664,6 +698,10 @@ def send_slack():
             all_trends.extend(res)
 
     
+    # 구글 트렌드 24시간 활성 트렌드 (생활/소비/건강 하단에 붙인다). 필터를 거치기 전의 날것을 둔다.
+    _gt4_geos = {"California (US)", "Singapore", "South Korea", "Netherlands"}
+    raw_trends_4 = [t for t in all_trends if t.get("geo_name") in _gt4_geos]
+
     all_trends = filter_trends_by_keywords(all_trends)
     # 추적 키워드 13개는 구글 뉴스 RSS에서 직접 가져온다. 목표 키워드 필터를 거치지 않는다.
     for _kw in TRACK_KEYWORDS:
@@ -762,6 +800,7 @@ def send_slack():
                 "elements": [{"type": "mrkdwn", "text": "📌 오늘의 한눈에 보기: " + " · ".join(_ov_parts)}]
             })
 
+        _gt24_added = False
         for _name, _items in trends_by_theme.items():
             if not _items:
                 continue
@@ -785,6 +824,14 @@ def send_slack():
                     "type": "section",
                     "text": {"type": "mrkdwn", "text": header_text + "\n" + "\n".join(_chunk)}
                 })
+            # 생활/소비/건강 주제 바로 아래에 구글 트렌드 24시간 활성 트렌드를 붙인다.
+            if _name == "☕ 생활/소비/건강":
+                trends_blocks.extend(_build_google_trends_24h(raw_trends_4))
+                _gt24_added = True
+
+        # 생활/소비/건강 주제에 항목이 없어서 위에서 안 붙었다면, 주제들 뒤에 붙인다.
+        if not _gt24_added:
+            trends_blocks.extend(_build_google_trends_24h(raw_trends_4))
 
         if top10_str:
             trends_blocks.append({
