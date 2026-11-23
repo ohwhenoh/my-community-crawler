@@ -565,6 +565,10 @@ GT24_REGIONS = [
 
 def _build_google_trends_24h(raw_trends, top_n=8):
     # 구글 트렌드 날것(필터 전)을 지역별로 묶어 24시간 활성 트렌드만 보여준다.
+    # 키워드만 나열하면 무슨 내용인지 알 수 없어, 각 검색어마다 첫 번째 관련 뉴스의
+    # 헤드라인을 한 줄로 붙인다. (2026-11-23, 파트너님 요청)
+    # 헤드라인은 트렌드 Really Simple Syndication의 ht:news_item에서 이미 가져온
+    # 것이다. 새로 가져오지 않으므로 추가 요청이 없다. 헤드라인은 60자로 자른다.
     by_region = {}
     for t in raw_trends or []:
         by_region.setdefault(t.get("geo_name", ""), []).append(t)
@@ -574,13 +578,24 @@ def _build_google_trends_24h(raw_trends, top_n=8):
         if not _items:
             continue
         _items = sorted(_items, key=lambda x: -(_parse_traffic(x.get("traffic", "")) or 0))[:top_n]
-        _parts = []
+        lines.append(f"{_flag}:")
         for _it in _items:
             _kw = _it["keyword"]
             _tr = _it.get("traffic", "")
             _tr_txt = f"({_tr}+)" if _tr else ""
-            _parts.append(f"{_safe_mrkdwn_link(_it.get('search_link', ''), _kw)} {_tr_txt}".strip())
-        lines.append(f"{_flag}: " + " · ".join(_parts))
+            _line = f"• {_safe_mrkdwn_link(_it.get('search_link', ''), _kw)} {_tr_txt}".strip()
+            _news = _it.get("news") or []
+            if _news:
+                _hl = (_news[0].get("title") or "").strip()
+                if len(_hl) > 60:
+                    _hl = _hl[:57] + "…"
+                if _hl:
+                    _nurl = _news[0].get("url") or ""
+                    if _nurl:
+                        _line += f" — {_safe_mrkdwn_link(_nurl, _hl)}"
+                    else:
+                        _line += f" — {_hl}"
+            lines.append(_line)
     if not lines:
         return []
     return [{
