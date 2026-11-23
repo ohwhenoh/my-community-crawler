@@ -8,8 +8,10 @@
 사용법: 크론에 15분마다 등록한다.
   */15 * * * * cd /home/oz/my-community-crawler && /usr/bin/python3 slack_push_watchdog.py >> logs/watchdog.log 2>&1
 """
+import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timedelta
@@ -69,6 +71,37 @@ def _container_running():
         return False
 
 
+def _compile_ok(path):
+    # 파일이 문법적으로 실행 가능한지 확인한다.
+    try:
+        r = subprocess.run(
+            [sys.executable, "-m", "py_compile", path],
+            capture_output=True, text=True, timeout=60,
+        )
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def _restore_backup():
+    # 문법이 깨진 푸셔를 백업 중 가장 최근의 실행 가능한 버전으로 되돌린다.
+    # 백업 이름: slack_pusher.py.bak-YYYYMMDD-HHMM
+    pusher = os.path.join(REPO_DIR, "slack_pusher.py")
+    backups = sorted(glob.glob(pusher + ".bak-*"), reverse=True)
+    for bak in backups:
+        if _compile_ok(bak):
+            try:
+                shutil.copy2(bak, pusher)
+                log(f"깨진 푸셔를 백업으로 되돌렸다: {os.path.basename(bak)}")
+                return True
+            except Exception as e:
+                log(f"백업 복원 실패 ({bak}): {e}")
+                continue
+        log(f"백업 {os.path.basename(bak)}도 문법이 깨졌다. 다음 백업을 본다.")
+    log("실행 가능한 백업이 없다. 수동 복원이 필요하다.")
+    return False
+
+
 def run_pusher():
     # 푸셔를 다시 실행한다. 라즈베리에서는 컨테이너 안에서 실행하고, 랙스다에서는 바로 실행한다.
     # .env를 읽어 푸시 모드를 그대로 쓴다.
@@ -86,6 +119,12 @@ def run_pusher():
         except Exception as e:
             log(f"푸셔 다시 실행 실패 (컨테이너 안): {e}")
             return False
+    pusher_path = os.path.join(REPO_DIR, "slack_pusher.py")
+    # 랙스다 직접 실행 전에 문법을 확인한다. 깨진 배포가 15분마다 재시도만 반복하는 것을 막는다.
+    if not _compile_ok(pusher_path):
+        log("푸셔 문법이 깨졌다. 백업으로 되돌린 뒤 다시 실행한다.")
+        if not _restore_backup():
+            return False
     env = dict(os.environ)
     env_path = os.path.join(REPO_DIR, ".env")
     if os.path.exists(env_path):
@@ -98,7 +137,7 @@ def run_pusher():
                 env[k.strip()] = v.strip()
     try:
         r = subprocess.run(
-            [sys.executable, os.path.join(REPO_DIR, "slack_pusher.py")],
+            [sys.executable, pusher_path],
             cwd=REPO_DIR, env=env, capture_output=True, text=True, timeout=600,
         )
         tail = (r.stdout or "")[-500:]
