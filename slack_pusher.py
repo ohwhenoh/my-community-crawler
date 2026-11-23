@@ -236,7 +236,7 @@ def get_b2b_sales_report():
     
     _fx_date = FX_META.get("fx_date") or "날짜 미상"
     report = f"🔄 *[글로벌 B2B 매력도 분석]*\n기준: {datetime.now(timezone(timedelta(hours=9))).strftime('%y-%m-%d')} | 환율 3개월 전 대비 (유럽중앙은행 고시 {_fx_date}) | 판정은 자체 규칙, 투자 신호 아님\n\n"
-    report += f"📊 *글로벌 증시 전광판* (전일 대비 · Top 기업 대용 지수)\n"
+    report += "📊 *글로벌 증시 전광판* (전일 대비 · Top 기업 대용 지수)\n"
     _us_src = YIELD_SOURCE.get("united-states", ("자료 없음", ""))
     report += f"미국 10년 금리: {us_yield:.2f}% ({_us_src[0]}{' ' + _us_src[1] if _us_src[1] else ''})\n"
     
@@ -254,7 +254,7 @@ def get_b2b_sales_report():
     report += f"🇲🇾 말레이시아 (KLCI): {_fmt(my_idx)}\n"
     report += f"🇮🇩 인도네시아 (IDX): {_fmt(id_idx)}\n"
     report += f"🇹🇼 대만 (TAIEX): {_fmt(tw_idx)}\n"
-    report += f"_(참고: 🟢 초록=상승/좋음, 🔴 빨강=하락/나쁨 - 서양식 기준)_\n\n"
+    report += "_(참고: 🟢 초록=상승/좋음, 🔴 빨강=하락/나쁨 - 서양식 기준)_\n\n"
     
     for c in countries:
         local_yield_data = get_te_yield(c["te_path"])
@@ -271,7 +271,7 @@ def get_b2b_sales_report():
                 trend_word = "상승" if raw_fx_change > 0 else "하락"
                 report += f"\n{c['flag']} *{c['name']} ({sym})*\n"
                 report += f" • 환율: {cfx:,.4f} (3개월 전 대비 {trend_word} {abs(raw_fx_change):.2f}%, 유럽중앙은행 고시 {_fx_date})\n"
-                report += f" • 판정 없음 — 금리 자료 없음 (출처 실패)\n"
+                report += " • 판정 없음 — 금리 자료 없음 (출처 실패)\n"
             continue
         
         if cfx == 0 or hfx == 0: continue
@@ -301,7 +301,7 @@ def get_b2b_sales_report():
             status = "⏸️ 대기 (기어중립)"
             _score_txt = f"[{final_score:+.2f}%: 환율 {fx_gain_score:+.2f}, 금리차 {_spread_contrib:+.2f}]"
             
-        cache_warn = f" (⚠️캐시)" if local_cache_date else ""
+        cache_warn = " (⚠️캐시)" if local_cache_date else ""
         
         # 갤럭시 S22 울트라 화면에 맞춘 모바일 UI 최적화
         _local_src = YIELD_SOURCE.get(c["te_path"], ("자료 없음", ""))
@@ -740,7 +740,7 @@ def _split_long_sections(blocks, limit=2800):
             out.append({"type": "section", "text": {"type": "mrkdwn", "text": "\n".join(cur)}})
     return out
 
-def _validate_payload(payload):
+def _validate_payload(payload, top10_bound=None):
     # 보내기 전 최종 검사. 문제를 찾으면 그 내용을 돌려준다.
     problems = []
     if not payload:
@@ -756,7 +756,70 @@ def _validate_payload(payload):
             for u in re.findall(r"<(https?://[^>|]+)", t):
                 if "&" in u:
                     problems.append(f"링크 주소에 &가 있다: {u[:80]}")
+    # 내용 검사 (2026-11-23): 오늘 겪은 오류가 다시 슬랙에 나가기 전에 막는다.
+    # 이 검사는 "코드가 망가졌다"는 신호만 잡는다. 소식이 적거나 자료가 없는 날은
+    # 통과한다. 자료가 없는 것은 오류가 아니다.
+    _all_text = "\n".join(
+        b.get("text", {}).get("text", "")
+        for b in blocks if b.get("type") == "section"
+    )
+    if "검색량 미상" in _all_text:
+        problems.append("검색량 미상 표시가 있다. 없는 숫자는 빼야 한다.")
+    if top10_bound is not None:
+        for b in blocks:
+            if b.get("type") == "context":
+                _txt = (b.get("elements") or [{}])[0].get("text", "")
+                if "Top 10" in _txt and "Top 10*:" in _txt:
+                    _counts = [int(n) for n in re.findall(r"\((\d+)\)", _txt.split("Top 10*:", 1)[1])]
+                    if _counts and max(_counts) > top10_bound:
+                        problems.append(f"Top 10 가장 큰 숫자 {max(_counts)}가 전체 항목 수 {top10_bound}보다 크다. 단위가 섞였다.")
+                    break
+    if "글로벌 B2B 매력도 분석" in _all_text:
+        _us_line = ""
+        for _line in _all_text.split("\n"):
+            if "미국 (나스닥/S&P500 평균)" in _line:
+                _us_line = _line
+                break
+        # 미국 줄은 부호 있는 변동률(-4.49%)이나 자료 없음 중 하나가 있어야 한다.
+        # "진입 금지 (VIX: 35.9 / 10Y: 4.95%)"만 있으면 숫자가 감춰진 것이다.
+        # 4.95%의 %는 금리지 변동률이 아니므로 부호 있는 %로만 본다. (2026-11-23)
+        if _us_line and not re.search(r"[+-]\d+\.\d+%", _us_line) and "자료 없음" not in _us_line:
+            problems.append("미국 전광판 줄에 숫자가 없다.")
+        if _all_text.count("자체 규칙") > 2:
+            problems.append("면책 문구가 여러 번 반복된다.")
     return problems
+
+
+def _alert_content_failure(mode, reasons):
+    # 내용 검사 실패는 다시 실행해도 고쳐지지 않는다(코드 문제). 사용자가 알아야
+    # 하니 같은 채널에 한 줄로 알린다. 같은 날 같은 이유는 한 번만 알린다.
+    if not SLACK_WEBHOOK_URL:
+        return
+    try:
+        _dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+        os.makedirs(_dir, exist_ok=True)
+        _alert_path = os.path.join(_dir, "content_alert.json")
+        _today = datetime.now().strftime("%Y-%m-%d")
+        _reason = "; ".join(reasons)
+        _last = {}
+        try:
+            with open(_alert_path, encoding="utf-8") as f:
+                _last = json.load(f)
+        except Exception:
+            _last = {}
+        if _last.get("mode") == mode and _last.get("date") == _today and _last.get("reason") == _reason:
+            print("내용 검사 실패 알림은 오늘 이미 보냈다. 다시 보내지 않는다.")
+            return
+        _msg = {
+            "text": f"🚨 오늘 {mode} 푸시를 보내지 않았다 (내용 검사 실패: {_reason}). 코드 확인이 필요하다.",
+            "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": f"🚨 오늘 *{mode}* 푸시를 보내지 않았다.\n내용 검사 실패: {_reason}\n다시 실행해도 같은 결과가 나온다. 코드를 확인해야 한다."}}],
+        }
+        _post_with_retry(SLACK_WEBHOOK_URL, _msg)
+        with open(_alert_path, "w", encoding="utf-8") as f:
+            json.dump({"mode": mode, "date": _today, "reason": _reason}, f, ensure_ascii=False)
+        print("내용 검사 실패 알림을 보냈다.")
+    except Exception as e:
+        print("내용 검사 실패 알림 보내기 실패:", e)
 
 def send_slack():
     SENT_URLS = load_history()
@@ -986,16 +1049,25 @@ def send_slack():
         payload_b2b["blocks"] = _split_long_sections(payload_b2b["blocks"])
     if payload_trends:
         payload_trends["blocks"] = _split_long_sections(payload_trends["blocks"])
+    _b2b_status = None
+    _trends_status = None
+    _errors = []
+    _content_reasons = []
     # 가드레일: 자동 수정 뒤에도 문제가 남으면 그 보고서는 보내지 않는다. 다음 실행 때 다시 보낸다.
+    # 내용 검사 실패는 상태 파일에 기록한다. 기록하지 않으면 감시 스크립트가 성공으로 착각한다. (2026-11-23)
     if payload_b2b:
-        _p = _validate_payload(payload_b2b)
+        _p = _validate_payload(payload_b2b, len(summarized_all))
         if _p:
             print("기업 간 거래 보고서 검사 실패, 보내지 않는다:", _p)
+            _errors.append("B2B 내용 검사 실패: " + "; ".join(_p))
+            _content_reasons.extend(_p)
             payload_b2b = None
     if payload_trends:
-        _p = _validate_payload(payload_trends)
+        _p = _validate_payload(payload_trends, len(summarized_all))
         if _p:
             print("소식 보고서 검사 실패, 보내지 않는다:", _p)
+            _errors.append("Trends 내용 검사 실패: " + "; ".join(_p))
+            _content_reasons.extend(_p)
             payload_trends = None
 
     # [E2E 텍스트 풀-프린트 검증]
@@ -1006,10 +1078,7 @@ def send_slack():
         print("--- PAYLOAD 2: TRENDS ---")
         print(json.dumps(payload_trends, ensure_ascii=False, indent=2))
     print("------------------------")
-    
-    _b2b_status = None
-    _trends_status = None
-    _errors = []
+
     if SLACK_WEBHOOK_URL:
         try:
             _sent_ok = True
@@ -1042,6 +1111,9 @@ def send_slack():
         _errors.append("SLACK_WEBHOOK_URL이 비어 있다")
     # 이번 실행 결과를 상태 파일에 남긴다. 감시 스크립트가 이 파일을 보고 실패를 알아챈다.
     _write_push_status(_mode, _b2b_status, _trends_status, _errors)
+    # 내용 검사 실패는 다시 실행해도 고쳐지지 않는다. 한 번만 알린다. (2026-11-23)
+    if _content_reasons:
+        _alert_content_failure(_mode, _content_reasons)
 
 if __name__ == "__main__":
     send_slack()
