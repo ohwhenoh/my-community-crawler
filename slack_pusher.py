@@ -299,7 +299,7 @@ def get_b2b_sales_report():
     return report.strip()
 
 
-# 감시 단어 목록 (2026-11-06, 파트너님이 직접 정한 88개 + "구글 트렌드" 표기 1개 = 89개).
+# 감시 단어 목록 (2026-11-06, 파트너님이 직접 정한 88개 + "구글 트렌드" 표기 1개 = 89개; 2026-11-23 한국 소식 보강 4개 추가 = 93개).
 # 구글 트렌드 Really Simple Syndication 필터와 구글 뉴스 Really Simple Syndication 검색 둘 다 이 목록을 쓴다.
 # 목적: 국제 정세와 단어를 빨리 캐치한다.
 WATCH_KEYWORDS = [
@@ -321,7 +321,8 @@ WATCH_KEYWORDS = [
     "샤오미", "3d 프린팅", "F1", "보잉 777", "오설록",
     "아테스토니", "캠리", "어코드", "드론", "어깨 뻐근함",
     "캐나다구스", "보잉 787", "Z flip 8", "클로드", "에르메스",
-    "쿠치넬리",
+    "쿠치넬리", "코스피", "한국 증시", "한국은행",
+    "대한민국 대통령",
 ]
 TARGET_KEYWORDS = WATCH_KEYWORDS
 
@@ -547,8 +548,8 @@ THEMES = [
     ("🇨🇳 중국", ["중국 증시", "중국 로봇", "유니트리", "중국 AI", "중국 데이터 센터", "중국 국경", "중국 분쟁", "중국 군사", "대만 군사", "샤오미"]),
     ("🌍 지정학/안보", ["러시아 전쟁", "러시아 유가", "이스라엘 의석 수", "이스라엘 총리", "페트리어트", "토마호크", "항공모함", "해킹", "드론"]),
     ("💻 반도체/AI", ["인텔", "인텔 주가", "엔비디아", "삼성반도체", "하이닉스", "마이크론", "HBM", "HBF", "클로드", "메타 뮤즈", "엔트로픽 상장", "샘 알트만 인터뷰", "Dola", "미국 데이터 센터", "개방형 팬"]),
-    ("📈 시장/금융", ["QQQ", "VOO", "SPY", "국채", "환율", "코인", "일본 환율", "말레이시아 환율"]),
-    ("🇰🇷 한국", ["대한민국 대통령 지지도", "대한민국 사법개혁", "대한민국 대법원장", "대한민국 탄핵"]),
+    ("📈 시장/금융", ["QQQ", "VOO", "SPY", "국채", "환율", "코인", "일본 환율", "말레이시아 환율", "코스피", "한국 증시"]),
+    ("🇰🇷 한국", ["대한민국 대통령 지지도", "대한민국 사법개혁", "대한민국 대법원장", "대한민국 탄핵", "대한민국 대통령", "한국은행"]),
     ("🇪🇺 유럽", ["유럽 금리", "유럽 실업률", "유럽 데이터 센터"]),
     ("🌏 기타 지역", ["아프리카 난민", "이란 난민", "브라질 대두", "브라질 인프라", "태국 국왕", "인도네시아 IT"]),
     ("☕ 생활/소비/건강", ["커피", "지방간", "콜레스테롤", "희귀질환 치료제", "우롱차", "백차", "DTF 2060", "하드디스크", "롤스로이스", "마이바흐", "3d 프린팅", "F1", "보잉 777", "오설록", "아테스토니", "캠리", "어코드", "어깨 뻐근함", "캐나다구스", "보잉 787", "Z flip 8", "에르메스", "쿠치넬리", "구글 트랜드", "구글 트렌드"]),
@@ -794,7 +795,7 @@ def send_slack():
     raw_trends_4 = [t for t in all_trends if t.get("geo_name") in _gt4_geos]
 
     all_trends = filter_trends_by_keywords(all_trends)
-    # 추적 키워드 13개는 구글 뉴스 RSS에서 직접 가져온다. 목표 키워드 필터를 거치지 않는다.
+    # 추적 키워드 17개는 구글 뉴스 RSS에서 직접 가져온다. 목표 키워드 필터를 거치지 않는다.
     for _kw in TRACK_KEYWORDS:
         _kn = get_keyword_news(_kw)
         if _kn:
@@ -810,6 +811,7 @@ def send_slack():
     # 같은 정규화 제목은 한 번만 남기고, 몇 개 지역에서 나왔는지 센다.
     # (이미 보낸 URL을 먼저 거른 뒤에 중복을 합친다. 먼저 합치면 안 보낸 복사본까지 사라진다.)
     _seen_norm = {}
+    _seen_kw = []
     deduped_all = []
     for _t in summarized_all:
         _first_title = _t["news"][0]["title"] if _t.get("news") else _t.get("keyword", "")
@@ -818,22 +820,41 @@ def send_slack():
             _seen_norm[_norm]["geo_count"] = _seen_norm[_norm].get("geo_count", 1) + 1
             _seen_norm[_norm].setdefault("geos", []).append(_t.get("geo_name", ""))
             continue
+        # 단어 기준 중복 제거 (2026-11-23): 검색량이 없는 항목(추적 키워드로 직접
+        # 가져온 기사)은 트렌드 항목과 같은 주제인 경우가 많다. 단어가 이미 남긴
+        # 항목의 단어와 같거나, 4자 이상인 단어끼리 포함 관계이면 같은 소식으로 보고 건너뛴다.
+        # 짧은 단어(환율, 코인, 드론)는 포함 관계가 흔해 포함으로는 합치지 않는다.
+        _kw_norm = _normalize_title(_t.get("keyword", ""))
+        if not _t.get("traffic", "") and _kw_norm:
+            _kw_dup = False
+            for _sk in _seen_kw:
+                if _kw_norm == _sk or (
+                    min(len(_kw_norm), len(_sk)) >= 4
+                    and (_kw_norm in _sk or _sk in _kw_norm)
+                ):
+                    _kw_dup = True
+                    break
+            if _kw_dup:
+                continue
         _t["geo_count"] = 1
         _t["geos"] = [_t.get("geo_name", "")]
         if _norm:
             _seen_norm[_norm] = _t
+        if _kw_norm:
+            _seen_kw.append(_kw_norm)
         deduped_all.append(_t)
     summarized_all = deduped_all
     for _t in summarized_all:
         _t["category"] = classify_trend_category(_t)
-    # 핵심 키워드 Top 10 (검색량 가중치). 감시 단어 구절을 세어 소식 보고서와 기업 간 거래 보고서 둘 다 하단에 붙인다.
+    # 핵심 키워드 Top 10 (기사 건수만 센다). 감시 단어 구절을 세어 소식 보고서와 기업 간 거래 보고서 둘 다 하단에 붙인다.
+    # 검색량을 더하면 한 건의 검색량(예: 엔비디아 500)이 순위를 지배한다. (2026-11-23 수정)
     _scores = {}
     for _t in summarized_all:
         _txt = _t["keyword"] + " " + _t.get("summary", "")
         for _n in _t["news"]:
             _txt += " " + _n["title"]
         _low = _txt.lower()
-        _w = _parse_traffic(_t.get("traffic", "")) or 1
+        _w = 1
         for _kw in TARGET_KEYWORDS:
             if _kw.lower() in _low:
                 _scores[_kw] = _scores.get(_kw, 0) + _w
@@ -862,13 +883,17 @@ def send_slack():
             summary = t["summary"]
             top_news_url = t["news"][0]["url"] if t["news"] else s_link
             _traf = t.get("traffic", "")
-            _traf_txt = f"검색량 {_traf}+" if _traf else "검색량 미상"
+            # 검색량이 없으면 그 부분을 아예 빼고 제목만 보여준다. (2026-11-23 수정)
+            _meta = f"[{g}]"
+            if _traf:
+                _meta += f" · 검색량 {_traf}+"
+            if t.get("geo_count", 1) > 1:
+                _meta += f" · {t['geo_count']}개 지역"
             _src = t["news"][0].get("source") if t.get("news") else None
             _dom = _src if _src else _publisher_label(top_news_url)
-            _geo_txt = f", {t.get('geo_count', 1)}개 지역" if t.get("geo_count", 1) > 1 else ""
             # 한 항목을 두 줄로 쓴다. 첫 줄은 단어와 지역, 검색량. 둘째 줄은 기사 제목과 출처.
             _item = (
-                f"• {_safe_mrkdwn_link(s_link, '*' + kw + '*')} [{g}] · {_traf_txt}{_geo_txt}\n"
+                f"• {_safe_mrkdwn_link(s_link, '*' + kw + '*')} {_meta}\n"
                 f"↳ {_safe_mrkdwn_link(top_news_url, summary)} (출처: {_dom})"
             )
             trends_by_theme[_theme_for(t)].append(_item)
