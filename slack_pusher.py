@@ -198,13 +198,15 @@ def get_b2b_sales_report():
     has_cache = bool(us_cache_date)
     
     def get_index_change(symbol):
+        # 가져오기 실패는 0.00%가 아니라 없음으로 돌려준다. 실패를 0.00%로 찍으면
+        # 빨간불 0.00%가 되어 없는 자료가 있는 자료처럼 보인다. (2026-11-23)
         try:
             res = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}", headers={'User-Agent': 'Mozilla/5.0'}, timeout=5)
             if res.status_code == 200:
                 meta = res.json()['chart']['result'][0]['meta']
                 return (meta['regularMarketPrice'] / meta['chartPreviousClose'] - 1) * 100
         except: pass
-        return 0.0
+        return None
         
     def get_vix():
         try:
@@ -214,8 +216,15 @@ def get_b2b_sales_report():
         except: pass
         return 0.0
 
-    us_avg = (get_index_change('^IXIC') + get_index_change('^GSPC')) / 2
-    cn_avg = (get_index_change('000001.SS') + get_index_change('^HSI')) / 2
+    def _avg(a, b):
+        _vals = [v for v in (a, b) if v is not None]
+        return sum(_vals) / len(_vals) if _vals else None
+
+    def _fmt(v):
+        return f"{gc(v)} {v:+.2f}%" if v is not None else "자료 없음"
+
+    us_avg = _avg(get_index_change('^IXIC'), get_index_change('^GSPC'))
+    cn_avg = _avg(get_index_change('000001.SS'), get_index_change('^HSI'))
     kr_idx = get_index_change('^KS11')
     sg_idx = get_index_change('^STI')
     my_idx = get_index_change('^KLSE')
@@ -227,41 +236,45 @@ def get_b2b_sales_report():
     
     _fx_date = FX_META.get("fx_date") or "날짜 미상"
     report = f"🔄 *[글로벌 B2B 매력도 분석]*\n기준: {datetime.now(timezone(timedelta(hours=9))).strftime('%y-%m-%d')} | 환율 3개월 전 대비 (유럽중앙은행 고시 {_fx_date}) | 판정은 자체 규칙, 투자 신호 아님\n\n"
-    report += f"📊 *글로벌 증시 전광판* (Top 기업 대용 지수)\n"
+    report += f"📊 *글로벌 증시 전광판* (전일 대비 · Top 기업 대용 지수)\n"
     _us_src = YIELD_SOURCE.get("united-states", ("자료 없음", ""))
     report += f"미국 10년 금리: {us_yield:.2f}% ({_us_src[0]}{' ' + _us_src[1] if _us_src[1] else ''})\n"
     
-    us_status = f"{gc(us_avg)} {us_avg:+.2f}%"
-    if vix_val >= 20.0 or us_yield >= 4.5:
-        us_status = f"🔴 진입 금지 (VIX: {vix_val:.1f} / 10Y: {us_yield:.2f}%)"
+    # 미국 줄은 변동성 지수가 높거나 10년 금리가 높으면 숫자를 감추고 진입 금지
+    # 만 적었는데, 숫자가 없으면 얼마나 떨어졌는지 알 수 없다. 숫자를 항상
+    # 보여주고 진입 금지는 덧붙인다. (2026-11-23)
+    us_status = _fmt(us_avg)
+    if us_avg is not None and (vix_val >= 20.0 or us_yield >= 4.5):
+        us_status = f"{_fmt(us_avg)} · 진입 금지 (VIX: {vix_val:.1f} / 10Y: {us_yield:.2f}%)"
         
     report += f"🇺🇸 미국 (나스닥/S&P500 평균): {us_status}\n" 
-    report += f"🇨🇳 중국 (상해/항셍 평균): {gc(cn_avg)} {cn_avg:+.2f}%\n"
-    report += f"🇰🇷 한국 (KOSPI): {gc(kr_idx)} {kr_idx:+.2f}%\n"
-    report += f"🇸🇬 싱가포르 (STI): {gc(sg_idx)} {sg_idx:+.2f}%\n"
-    report += f"🇲🇾 말레이시아 (KLCI): {gc(my_idx)} {my_idx:+.2f}%\n"
-    report += f"🇮🇩 인도네시아 (IDX): {gc(id_idx)} {id_idx:+.2f}%\n"
-    report += f"🇹🇼 대만 (TAIEX): {gc(tw_idx)} {tw_idx:+.2f}%\n"
+    report += f"🇨🇳 중국 (상해/항셍 평균): {_fmt(cn_avg)}\n"
+    report += f"🇰🇷 한국 (KOSPI): {_fmt(kr_idx)}\n"
+    report += f"🇸🇬 싱가포르 (STI): {_fmt(sg_idx)}\n"
+    report += f"🇲🇾 말레이시아 (KLCI): {_fmt(my_idx)}\n"
+    report += f"🇮🇩 인도네시아 (IDX): {_fmt(id_idx)}\n"
+    report += f"🇹🇼 대만 (TAIEX): {_fmt(tw_idx)}\n"
     report += f"_(참고: 🟢 초록=상승/좋음, 🔴 빨강=하락/나쁨 - 서양식 기준)_\n\n"
     
-    missing_yields = []
     for c in countries:
         local_yield_data = get_te_yield(c["te_path"])
         local_yield, local_cache_date = local_yield_data if local_yield_data else (0.0, False)
         if local_cache_date and local_cache_date != "자료 없음": has_cache = True
-        if local_yield == 0.0 or local_cache_date == "자료 없음":
-            missing_yields.append(c["name"])
-            continue
-        
         sym = c["sym"]
         cfx = curr_fx.get(sym, 0)
         hfx = hist_fx.get(sym, 0)
+        if local_yield == 0.0 or local_cache_date == "자료 없음":
+            # 금리 자료가 없어도 환율은 보여준다. 판정만 없다. 국가가 목록에서
+            # 통째로 사라지면 빠진 줄 모른다. (2026-11-23)
+            if cfx and hfx:
+                raw_fx_change = (cfx / hfx - 1.0) * 100.0
+                trend_word = "상승" if raw_fx_change > 0 else "하락"
+                report += f"\n{c['flag']} *{c['name']} ({sym})*\n"
+                report += f" • 환율: {cfx:,.4f} (3개월 전 대비 {trend_word} {abs(raw_fx_change):.2f}%, 유럽중앙은행 고시 {_fx_date})\n"
+                report += f" • 판정 없음 — 금리 자료 없음 (출처 실패)\n"
+            continue
         
         if cfx == 0 or hfx == 0: continue
-        
-        # 금리 데이터가 없는 국가는 제외 (노이즈 방지)
-        if local_yield == 0.0 or local_yield is None:
-            continue
             
         spread = us_yield - local_yield
         raw_fx_change = (cfx / hfx - 1.0) * 100.0
@@ -276,9 +289,17 @@ def get_b2b_sales_report():
         # 금리차가 판정을 지배하면 규칙을 적용하지 않는다. 금리차 기여도가 환율 기여도보다 크고 2% 이상이면, 판정은 금리차가 만든 것이지 환율 매력이 아니다. (예: 터키, 금리차 33%)
         if abs(_spread_contrib) > abs(fx_gain_score) and abs(_spread_contrib) >= 2.0:
             status = "⚠️ 규칙 적용 안 됨 (금리차가 판정을 지배함)"
-        elif final_score >= 0.5: status = "🔥 엑셀 (황금타이밍)"
-        elif final_score < -0.3: status = "🛑 브레이크 (진입금지)"
-        else: status = "⏸️ 대기 (기어중립)"
+            # 규칙이 안 되면 합계 점수는 뜻이 없다. 두 기여도만 보여준다. (2026-11-23)
+            _score_txt = f"[환율 {fx_gain_score:+.2f}, 금리차 {_spread_contrib:+.2f}]"
+        elif final_score >= 0.5:
+            status = "🔥 엑셀 (황금타이밍)"
+            _score_txt = f"[{final_score:+.2f}%: 환율 {fx_gain_score:+.2f}, 금리차 {_spread_contrib:+.2f}]"
+        elif final_score < -0.3:
+            status = "🛑 브레이크 (진입금지)"
+            _score_txt = f"[{final_score:+.2f}%: 환율 {fx_gain_score:+.2f}, 금리차 {_spread_contrib:+.2f}]"
+        else:
+            status = "⏸️ 대기 (기어중립)"
+            _score_txt = f"[{final_score:+.2f}%: 환율 {fx_gain_score:+.2f}, 금리차 {_spread_contrib:+.2f}]"
             
         cache_warn = f" (⚠️캐시)" if local_cache_date else ""
         
@@ -289,10 +310,8 @@ def get_b2b_sales_report():
         report += f"\n{c['flag']} *{c['name']} ({sym})*{cache_warn}\n"
         report += f" • 환율: {cfx:,.4f} (3개월 전 대비 {trend_word} {abs(raw_fx_change):.2f}%, 유럽중앙은행 고시 {_fx_date})\n"
         report += f" • 금리: 🇺🇸{us_yield:.2f}% ({_us_src_txt}) vs {c['flag']}{local_yield:.2f}% ({_local_src_txt})\n"
-        report += f" • 판정: {status} [{final_score:+.2f}%: 환율 {fx_gain_score:+.2f}, 금리차 {_spread_contrib:+.2f}] — 자체 규칙, 투자 신호 아님\n"
+        report += f" • 판정: {status} {_score_txt}\n"
         
-    if missing_yields:
-        report += f"\n금리 자료 없음: {', '.join(missing_yields)} (출처 실패, 기본값 사용 안 함)\n"
     if has_cache:
         report = report.replace("🔄 *[글로벌 B2B 매력도 분석]*", "🔄 *[글로벌 B2B 매력도 분석]*\n🚨 *[주의: API 통신 장애로 일부 국가의 경우 최근 캐시 데이터가 반영되었습니다]*")
         
