@@ -19,6 +19,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Slack pusher guard (syntax + lint + content checks)
+        # 문법이 깨지거나 오늘 고친 오류가 되살아나면 이미지를 만들지 않는다.
+        # 가드레일이 없으면 파이도 못 띄운다. (2026-11-23)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run pusher guard
+        run: |
+          python3 -m pip install -r requirements-pusher.txt pyflakes
+          python3 -m py_compile slack_pusher.py
+          python3 -m pyflakes slack_pusher.py
+          python3 slack_pusher_guard.py --check-only slack_pusher.py
+
       - name: Set up QEMU (for Raspberry Pi arm64 build)
         uses: docker/setup-qemu-action@v3
 
